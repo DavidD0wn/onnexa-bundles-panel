@@ -1,0 +1,1220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Onnexa Bundles</title>
+<!-- sin client_id: modo local -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f1f1f1; --card:#fff; --ink:#303030; --muted:#616161; --soft:#8a8a8a;
+    --line:#e3e3e3; --line2:#ebebeb; --side:#1a1a1a; --side-ink:#e3e3e3; --side-hover:#2b2b2b;
+    --green:#29845a; --red:#c70a24; --violet:#8051ff; --violet-soft:#efe9ff; --brand:#c9a08f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:13px;color:var(--ink);background:var(--bg)}
+  button{font:inherit;cursor:pointer;color:inherit}
+  input,select,textarea{font:inherit;color:inherit}
+  .hide{display:none!important}
+  .app{display:grid;grid-template-columns:240px 1fr;height:100vh}
+
+  /* ---------- Shopify admin sidebar ---------- */
+  .side{background:var(--side);color:var(--side-ink);padding:10px 8px;overflow:auto}
+  .side .logo{display:flex;align-items:center;gap:8px;padding:4px 8px 12px;font-weight:600;color:#fff}
+  .side .logo i{width:22px;height:22px;border-radius:6px;background:#95bf47;display:inline-block}
+  .side .search{background:#303030;border-radius:10px;padding:7px 10px;color:#9a9a9a;margin:0 4px 12px;display:flex;justify-content:space-between}
+  .nav a{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:8px;color:var(--side-ink);text-decoration:none;font-weight:500;cursor:pointer}
+  .nav a:hover{background:var(--side-hover)}
+  .nav a.dim{opacity:.6;cursor:default}
+  .nav a.dim:hover{background:transparent}
+  .nav .ico{width:14px;height:14px;border:1.6px solid currentColor;border-radius:4px;opacity:.8;flex:none}
+  .nav .count{margin-left:auto;background:#3a3a3a;border-radius:6px;padding:0 6px;font-size:11px}
+  .nav .group{font-size:12px;color:#9a9a9a;padding:14px 10px 4px}
+  .nav .appitem{background:#303030;color:#fff}
+  .nav .appitem .ico{background:var(--brand);border-color:var(--brand)}
+  .nav .sub a{padding-left:34px;font-weight:450;color:#bdbdbd}
+  .nav .sub a.active{color:#fff;background:#2b2b2b}
+
+  /* ---------- Main ---------- */
+  .main{overflow:auto}
+  .topbar{height:44px;display:flex;align-items:center;gap:8px;padding:0 20px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  .topbar .appicon{width:20px;height:20px;border-radius:5px;background:var(--brand)}
+  .topbar b{font-weight:600}
+  .wrap{max-width:1100px;margin:0 auto;padding:22px 20px 60px}
+  .mock-note{background:#fff8e6;border:1px solid #ffe2a8;color:#5e4200;border-radius:12px;padding:10px 14px;margin-bottom:16px;display:flex;gap:10px;align-items:center}
+  .mock-note button{margin-left:auto;border:0;background:transparent;font-size:16px;color:#5e4200}
+  .card{background:var(--card);border-radius:12px;box-shadow:0 1px 0 rgba(0,0,0,.07),0 0 0 1px rgba(0,0,0,.05);padding:16px;margin-bottom:16px}
+  .card h2{font-size:16px;margin:0;font-weight:650}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .row.between{justify-content:space-between}
+  .nowrap{flex-wrap:nowrap}
+  .spacer{flex:1}
+  .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;background:#fff;font-weight:500}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;flex:none}
+  .dot.off{background:#c4c4c4}
+  .dot.sched{background:#2c6ecb}
+  .dot.arch{background:#b5b5b5;outline:2px solid #e3e3e3}
+  .seg{display:inline-flex;gap:2px}
+  .seg button{border:0;background:transparent;padding:5px 10px;border-radius:8px;font-weight:500}
+  .seg button.on{background:#ebebeb}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 12px;font-weight:550;box-shadow:0 1px 0 rgba(0,0,0,.06);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{background:#fafafa}
+  .btn.dark{background:#303030;color:#fff;border-color:#303030}
+  .btn.dark:hover{background:#1a1a1a}
+  .btn.sm{padding:4px 10px;font-size:12px}
+  .btn.block{width:100%;justify-content:center}
+  .hint{color:var(--soft);font-size:11.5px}
+  .delta{font-size:11px;font-weight:600;white-space:nowrap}
+  .delta.up{color:var(--green)} .delta.down{color:var(--red)}
+  .switch{position:relative;width:34px;height:20px;border-radius:999px;background:#c4c4c4;border:0;transition:.15s;flex:none;padding:0}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.15s}
+  .switch.on{background:#303030}
+  .switch.on::after{left:17px}
+  .chip{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;background:#eaf4ff;color:#2c6ecb;margin-left:6px;vertical-align:middle}
+  .chip.gray{background:#f1f1f1;color:var(--muted)}
+  .chip.ab{background:#cdfee1;color:#0c5132;margin-left:auto;flex:none;cursor:pointer}
+
+  /* ---------- Overview ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
+  @media (max-width:1150px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .kpi svg{min-width:0;max-width:50%;flex-shrink:1}
+  .kpi{border:1px solid var(--line);border-radius:12px;padding:14px}
+  .kpi .t{font-weight:600;display:flex;align-items:center;gap:8px;text-decoration:underline dotted #c4c4c4;text-underline-offset:4px}
+  .kpi .t i{width:28px;height:28px;border-radius:50%;background:var(--violet-soft);display:inline-block;flex:none}
+  .kpi .v{font-size:20px;font-weight:700;margin-top:10px}
+  .kpi .d{color:var(--muted);margin-top:6px}
+  .kpi svg{display:block;margin-top:6px}
+
+  /* ---------- Tables ---------- */
+  .tabs{display:flex;gap:4px;flex-wrap:wrap}
+  .tabs button{border:0;background:transparent;padding:6px 10px;border-radius:8px;font-weight:500}
+  .tabs button.on{background:#ebebeb}
+  table{width:100%;border-collapse:collapse}
+  th{font-size:12px;color:var(--muted);font-weight:550;text-align:left;padding:8px 10px;background:#f7f7f7;border-bottom:1px solid var(--line);white-space:nowrap}
+  th u{text-decoration:underline dotted #b5b5b5;text-underline-offset:3px}
+  td{padding:10px;border-bottom:1px solid var(--line2);vertical-align:middle}
+  tr.click:hover>td{background:#fafafa;cursor:pointer}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tablewrap{border:1px solid var(--line);border-radius:10px;overflow:auto}
+  .deal-name{min-width:250px}
+  .deal-name b{display:block;font-weight:600;white-space:nowrap}
+  .deal-name span.sub{display:block;color:var(--muted);font-size:12px;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  td.cb,th.cb{width:34px;padding-right:0}
+  td.cb input,th.cb input{accent-color:#303030;width:15px;height:15px}
+  tr.sel>td{background:#f7f7f7}
+  .chevbtn{border:0;background:transparent;padding:2px 6px;border-radius:6px;color:var(--muted);transition:.15s;font-size:14px}
+  .chevbtn.open{transform:rotate(90deg)}
+  tr.subv>td{background:#f7f7f7;border-bottom:1px solid var(--line)}
+  .vname{display:flex;align-items:center;gap:6px;font-weight:600;white-space:nowrap}
+  .vname span{font-weight:400;color:var(--muted);font-size:12px}
+  .eye{border:0;background:transparent;padding:2px 4px;border-radius:6px;color:var(--muted)}
+  .eye:hover{background:#ebebeb}
+  tr.sub>td{background:#fbfbfb;padding:0}
+  .subtbl{margin:6px 10px 12px 88px;width:calc(100% - 98px);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .subtbl th{background:#f4f4f4}
+  .notest{display:flex;align-items:center;gap:12px;padding:12px 10px 12px 88px;color:var(--muted)}
+  .kebab{border:0;background:transparent;padding:4px 8px;border-radius:6px;font-size:16px;line-height:1;color:var(--muted)}
+  .kebab:hover{background:#f1f1f1}
+  .bulkbar{display:flex;align-items:center;gap:8px;background:#f4f4f4;border-radius:10px;padding:6px 10px;margin-bottom:8px}
+  .searchbox{border:1px solid var(--line);border-radius:8px;padding:5px 10px;width:200px;outline:none}
+  .searchbox:focus{border-color:#303030}
+  .dropdown{position:absolute;right:0;top:34px;z-index:20;background:#fff;border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.16),0 0 0 1px rgba(0,0,0,.06);padding:8px;min-width:220px}
+  .dropdown label{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;cursor:pointer}
+  .dropdown label:hover{background:#f4f4f4}
+  .dropdown input{accent-color:#303030;width:15px;height:15px}
+  .menu{position:absolute;right:40px;z-index:20;background:#fff;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.16),0 0 0 1px rgba(0,0,0,.06);padding:6px;min-width:150px}
+  .menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:7px 10px;border-radius:7px}
+  .menu button:hover{background:#f4f4f4}
+  .menu button.danger{color:var(--red)}
+
+  /* ---------- Editor (igual que Kaching) ---------- */
+  .editor{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:16px;align-items:start}
+  .epanel{background:#fff;border-radius:12px;box-shadow:0 0 0 1px rgba(0,0,0,.06);padding:10px}
+  .ehead{display:flex;align-items:center;gap:8px;padding:4px 4px 10px}
+  .ehead b{font-size:14px}
+  .ehead .back{border:0;background:transparent;font-size:16px;padding:0 4px}
+  .acc{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:#fff}
+  .acc>header{display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer;font-weight:600;user-select:none}
+  .acc>header .chev{transition:.15s;color:var(--soft);width:10px}
+  .acc.open>header .chev{transform:rotate(90deg)}
+  .acc>.body{display:none;padding:0 14px 14px}
+  .acc.open>.body{display:block}
+  .acc>header svg{flex:none}
+  .barwrap{display:flex;align-items:flex-start;gap:4px;margin-bottom:8px}
+  .handle{color:#b5b5b5;padding-top:12px;cursor:grab;font-size:14px;width:14px;text-align:center}
+  .barwrap .acc{flex:1;margin:0;min-width:0}
+  .addbox{border:1.5px dashed #c9c9c9;border-radius:12px;padding:14px;display:flex;justify-content:center;margin:0 0 8px 18px}
+  .field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;min-width:0}
+  .field label,.flabel{font-size:12px;color:var(--ink);font-weight:500;display:flex;align-items:center;justify-content:space-between}
+  .field input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),.field select{border:1px solid #8a8a8a55;border-radius:8px;padding:7px 9px;background:#fff;outline:none;width:100%;min-width:0}
+  .field input:focus,.field select:focus{border-color:#303030;box-shadow:0 0 0 1px #303030}
+  .pre{display:flex;align-items:center;border:1px solid #8a8a8a55;border-radius:8px;background:#fff;padding-left:9px}
+  .pre span{color:var(--muted);white-space:nowrap}
+  .pre input{border:0!important;box-shadow:none!important;padding-left:4px!important}
+  .tok{border:0;background:transparent;font-weight:700;color:var(--muted);padding:0 4px;border-radius:4px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+  .tok:hover{background:#f1f1f1;color:var(--ink)}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+  .grid3{display:grid;grid-template-columns:80px minmax(0,1fr) minmax(0,1fr);gap:8px}
+  .chk{display:flex;align-items:center;gap:8px;margin:6px 0;cursor:pointer}
+  .chk input{accent-color:#303030;width:15px;height:15px;margin:0;flex:none}
+  .chk .i{color:var(--soft);font-size:11px;border:1px solid #c4c4c4;border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center}
+  .sect{border-top:1px solid var(--line2);margin-top:12px;padding-top:12px}
+  .sect>b{display:block;margin-bottom:6px}
+  .btngrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+  .btngrid .btn{justify-content:center;font-size:12px;padding:5px 8px}
+  .rowline{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line2);margin-top:10px;padding-top:10px;font-weight:500}
+  .innercard{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+  .innercard .top{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .innercard .top b{flex:1}
+  .linkbtn{border:0;background:transparent;color:var(--red);font-weight:500;padding:2px 4px}
+  .linkbtn.gray{color:var(--muted)}
+  .gtabs{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:10px}
+  .gtabs button{border:0;background:#fff;padding:8px;font-weight:500;display:flex;flex-direction:column;align-items:center;gap:2px}
+  .gtabs button.on{background:#f1f8f5;box-shadow:inset 0 0 0 1.5px #29845a;color:#0c5132}
+  .gprod{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .gprod img{width:32px;height:32px;object-fit:contain;border-radius:6px;background:#f6efec}
+  .gprod b{flex:1;font-size:12px}
+  .soon{background:#f7f7f7;border-radius:8px;padding:10px;color:var(--muted)}
+  .layouts{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:12px}
+  .lay{border:0;border-right:1px solid var(--line);background:#fff;padding:8px 4px;display:flex;justify-content:center}
+  .lay:last-child{border-right:0}
+  .lay.on{background:#f1f8f5;box-shadow:inset 0 0 0 1.5px #29845a}
+  .range{display:flex;align-items:center;gap:8px}
+  .range input[type=range]{flex:1;accent-color:#303030;min-width:0}
+  .range .px{display:flex;align-items:center;border:1px solid #8a8a8a55;border-radius:8px;padding:2px 6px;flex:none}
+  .range .px input{border:0;width:30px;outline:none;padding:2px;-moz-appearance:textfield}
+  .range .px input::-webkit-inner-spin-button{display:none}
+  .range .px span{color:var(--muted);font-size:12px}
+  .cg{border-top:1px solid var(--line2);padding-top:8px;margin-top:8px}
+  .cg>b{display:block;font-size:12px;margin-bottom:6px}
+  .cgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 6px}
+  .cgrid label{font-size:11.5px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+  .sw{display:flex;align-items:center;gap:6px;border:1px solid #8a8a8a55;border-radius:8px;padding:3px 6px;background:#fff}
+  .sw input[type=color]{width:20px;height:20px;border:0;padding:0;background:transparent;border-radius:50%;cursor:pointer}
+  .sw input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+  .sw input[type=color]::-webkit-color-swatch{border:1px solid #d0d0d0;border-radius:50%}
+  .sw span{color:var(--soft);font-size:10px}
+  .tgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px}
+  .tgrid .grp{border-top:1px solid var(--line2);padding-top:8px}
+  .tgrid .grp>b{display:block;font-size:12px;margin-bottom:6px}
+  .tgrid .two{display:grid;grid-template-columns:72px minmax(0,1fr);gap:6px}
+  .tgrid .two small{font-size:11px;color:var(--muted)}
+  .tgrid select{border:1px solid #8a8a8a55;border-radius:8px;padding:5px 6px;width:100%;min-width:0;background:#fff}
+  .previewcol{position:sticky;top:64px}
+  .preview-head{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#f1f2f4;border-radius:10px;padding:10px;margin:10px 0 14px}
+  .preview-head .field{margin:0}
+  .stage{background:#fff;border-radius:10px;padding:10px 6px;display:flex;justify-content:center}
+  .toolbar-save{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+  .tokmenu{position:absolute;z-index:60;background:#fff;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18),0 0 0 1px rgba(0,0,0,.06);padding:6px;min-width:220px}
+  .tokmenu button{display:flex;justify-content:space-between;gap:10px;width:100%;border:0;background:transparent;padding:6px 8px;border-radius:7px;text-align:left}
+  .tokmenu button:hover{background:#f4f4f4}
+  .tokmenu code{font-size:11.5px;color:#8051ff}
+
+  /* ---------- Analytics ---------- */
+  .mgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:12px}
+  .m{border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;background:#fff;text-align:left}
+  .m.on{border-color:var(--violet);background:#faf8ff}
+  .m .l{font-weight:600;font-size:12px}
+  .m .v{font-weight:700;font-size:15px}
+  .m.add{border-style:dashed;color:#2c6ecb;display:flex;align-items:center;justify-content:center;font-weight:600}
+  .chartbox{border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:12px}
+  .legend{display:flex;gap:14px;color:var(--muted);font-size:11.5px;justify-content:center;margin-top:6px;flex-wrap:wrap}
+  .legend span::before{content:"";display:inline-block;width:14px;height:2px;background:var(--violet);vertical-align:middle;margin-right:6px}
+  .legend span.prev::before{background:repeating-linear-gradient(90deg,#b9a5ff 0 3px,transparent 3px 6px)}
+  .two-col{display:grid;grid-template-columns:1.6fr 1fr;gap:16px}
+  .funnel{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .funnel>div{padding:12px;border-right:1px solid var(--line);min-height:200px;display:flex;flex-direction:column}
+  .funnel>div:last-child{border-right:0}
+  .funnel .bars{flex:1;display:flex;align-items:flex-end;gap:8px;margin-top:10px}
+  .funnel .b{flex:1;border:1.5px solid var(--violet);border-radius:8px;background:#f7f4ff;min-height:4px}
+  .funnel .b.prev{border-style:dashed;opacity:.6;background:transparent}
+  .toggle-l{display:flex;align-items:center;gap:8px;color:var(--muted)}
+
+  /* ---------- Store preview ---------- */
+  .pdp{display:grid;grid-template-columns:1fr 1fr;gap:28px;background:#fff;border-radius:12px;padding:24px}
+  .pdp .gallery{background:#f6efec;border-radius:12px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .pdp .gallery img{width:80%;height:80%;object-fit:contain}
+  .pdp h1{font-size:22px;margin:0 0 6px;font-family:Roboto,Inter,sans-serif}
+  .stars{color:#e0a63a;letter-spacing:2px}
+  .atc{width:100%;margin-top:14px;border:0;border-radius:10px;padding:14px;background:#111;color:#fff;font-weight:700;font-size:15px}
+  .explain{background:#f7f4ff;border:1px solid #e1d8ff;border-radius:10px;padding:12px;margin-top:14px}
+  .explain ol{margin:6px 0 0;padding-left:18px}
+  .drawer{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:30}
+  .drawer.open{display:block}
+  .drawer .panel{position:absolute;right:0;top:0;bottom:0;width:min(440px,100%);background:#fff;padding:18px;overflow:auto}
+  .line{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line2)}
+  .line img{width:48px;height:48px;border-radius:8px;object-fit:cover;background:#f6efec}
+  .line .grow{flex:1}
+  .strike{color:#555;text-decoration:line-through;font-size:13px}
+  .code{background:#1e1e2a;color:#d6d6f5;border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre;overflow:auto;margin-top:8px}
+
+  /* ---------- Modals ---------- */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;z-index:40;align-items:flex-start;justify-content:center;overflow:auto;padding:28px 16px}
+  .modal.open{display:flex}
+  .modal .box{background:#f1f1f1;border-radius:16px;max-width:1040px;width:100%;padding:18px}
+  .modal .box.small{max-width:420px;background:#fff}
+  .abgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  .abcol{background:#fff;border-radius:12px;padding:16px;box-shadow:0 0 0 1px rgba(0,0,0,.05)}
+  .abcol.lead{box-shadow:0 0 0 2px #29845a}
+  .abhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .abhead b{font-size:15px}
+  .abstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:12px 0 16px}
+  .abstat{background:#f7f7f7;border-radius:8px;padding:8px}
+  .abstat span{font-size:11px;color:var(--muted)}
+  .abstat b{display:block;font-size:14px;margin-top:2px}
+  .abstat.best{background:#cdfee1}
+  .abstage{display:flex;justify-content:center;border-top:1px solid var(--line2);padding-top:18px}
+  .split{display:flex;height:8px;border-radius:99px;overflow:hidden;margin-top:12px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 16px;border-radius:10px;font-weight:500;z-index:70;opacity:0;transition:.2s;pointer-events:none;max-width:90vw}
+  .toast.show{opacity:1}
+
+  /* ---------- WIDGET: lo que ve el cliente (sale de state.style) ---------- */
+  .pb{letter-spacing:normal;width:100%;max-width:440px;color:#000}
+  .pb *{box-sizing:border-box}
+  .pb-title{display:flex;align-items:center;gap:12px;margin:0 0 12px;color:var(--pb-blockTitle);font-size:var(--pb-blockTitle-size);font-weight:var(--pb-blockTitle-weight);font-style:var(--pb-blockTitle-style);line-height:1.25;text-align:center}
+  .pb-title::before,.pb-title::after{content:"";flex:1;height:1px;background:var(--pb-border)}
+  .pb-timer{display:flex;justify-content:center;gap:6px;align-items:center;background:#111;color:#fff;border-radius:var(--pb-r);padding:8px;margin-bottom:12px;font-weight:600;font-size:13px}
+  .pb-timer b{font-variant-numeric:tabular-nums;background:#fff2;padding:1px 6px;border-radius:4px}
+  .pb-bars{display:flex;flex-direction:column;gap:var(--pb-gap)}
+  .pb-bar{position:relative;display:flex;align-items:center;padding:10px 20px;min-height:75px;background:var(--pb-cardBg);border:1px solid var(--pb-border);border-radius:var(--pb-r);cursor:pointer;transition:background .15s,box-shadow .15s}
+  .pb-bar[aria-checked=true]{background:var(--pb-selectedBg);box-shadow:inset 0 0 0 1px var(--pb-border)}
+  .pb-bar.soldout{opacity:.5;pointer-events:none}
+  .pb-bar img{width:42px;height:42px;object-fit:contain;flex:none;margin-right:18px}
+  .pb-radio{display:none;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--pb-border);flex:none;margin-right:14px;align-items:center;justify-content:center}
+  .pb-bar[aria-checked=true] .pb-radio::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--pb-border)}
+  .pb-mid{flex:1;min-width:0;margin-right:8px}
+  .pb-l1{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px}
+  .pb-bt{color:var(--pb-title);font-size:var(--pb-title-size);font-weight:var(--pb-title-weight);font-style:var(--pb-title-style);line-height:1.25}
+  .pb-label{background:var(--pb-labelBg);color:var(--pb-labelText);font-size:var(--pb-label-size);font-weight:var(--pb-label-weight);font-style:var(--pb-label-style);line-height:1.25;padding:2px 8px;border-radius:4px;white-space:nowrap}
+  .pb-sub{color:var(--pb-subtitle);font-size:var(--pb-subtitle-size);font-weight:var(--pb-subtitle-weight);font-style:var(--pb-subtitle-style);line-height:1.25;margin-top:2px}
+  .pb-qty{display:inline-flex;align-items:center;border:1px solid var(--pb-border);border-radius:6px;margin-top:6px;background:#fff}
+  .pb-qty span{padding:0 8px;font-size:13px}
+  .pb-qty i{font-style:normal;padding:0 8px;color:#555}
+  .pb-right{text-align:right;flex:none}
+  .pb-price{color:var(--pb-price);font-size:var(--pb-price-size);font-weight:var(--pb-price-weight);font-style:var(--pb-price-style);line-height:1.25}
+  .pb-price small{font-size:11px;font-weight:500;margin-left:2px}
+  .pb-full{color:var(--pb-fullPrice);font-size:13px;text-decoration:line-through}
+  .pb-badge{position:absolute;top:-8px;right:8px;font-weight:500;line-height:1;font-style:normal;padding:6px 8px;border-radius:0 0 5px 5px;white-space:nowrap}
+  .pb-badge.simple::before{content:"";position:absolute;top:0;left:-6px;border-bottom:8px solid var(--fold);border-left:6px solid transparent}
+  .pb-badge.pill{top:-11px;border-radius:999px;padding:5px 10px}
+  .pb-gt{text-align:center;color:var(--pb-blockTitle);font-size:var(--pb-giftsTitle-size);font-weight:var(--pb-giftsTitle-weight);font-style:var(--pb-giftsTitle-style);line-height:1.25;margin:18px 0 4px}
+  .pb-gs{text-align:center;color:var(--pb-subtitle);font-size:13px;margin-bottom:10px}
+  .pb-gifts{display:grid;grid-template-columns:repeat(var(--pb-n),minmax(0,1fr));gap:8px;margin-top:12px}
+  .pb-gift{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:20px 6px 10px;min-height:136px;text-align:center;background:var(--pb-giftBg);border:1px solid var(--pb-border);border-radius:var(--pb-r);color:var(--pb-giftText);font-size:var(--pb-gift-size);font-weight:var(--pb-gift-weight);font-style:var(--pb-gift-style);line-height:1.25;transition:background .2s,box-shadow .2s}
+  .pb-gift.on{background:var(--pb-giftSelBg);color:var(--pb-giftSelText);box-shadow:inset 0 0 0 1px var(--pb-border)}
+  .pb-gift img{width:72px;height:72px;object-fit:contain}
+  .pb-gift svg{width:42px;height:42px;margin:14px 0 4px;color:#5b6475}
+  .pb-gift:not(.on) .pb-gname{opacity:.75}
+  .pb-tag{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--pb-labelBg);color:var(--pb-labelText);font-size:11px;font-weight:700;line-height:1;font-style:normal;padding:4px 8px;border-radius:4px;white-space:nowrap}
+  .pb-tag s{opacity:.85;margin-left:4px;font-weight:500}
+  .pb.lay-horizontal .pb-bars{display:grid;grid-template-columns:repeat(var(--pb-nb),minmax(0,1fr))}
+  .pb.lay-grid .pb-bars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pb.lay-horizontal .pb-bar,.pb.lay-grid .pb-bar{flex-direction:column;text-align:center;padding:20px 8px 12px}
+  .pb.lay-horizontal .pb-bar img,.pb.lay-grid .pb-bar img{margin:0 0 8px;width:56px;height:56px}
+  .pb.lay-horizontal .pb-mid,.pb.lay-grid .pb-mid{margin:0}
+  .pb.lay-horizontal .pb-l1,.pb.lay-grid .pb-l1{flex-direction:column}
+  .pb.lay-horizontal .pb-right,.pb.lay-grid .pb-right{text-align:center;margin-top:8px}
+  .pb.lay-horizontal .pb-badge,.pb.lay-grid .pb-badge{right:50%;transform:translateX(50%)}
+  .pb.lay-horizontal .pb-badge::before,.pb.lay-grid .pb-badge::before{display:none}
+  .pb.lay-radio .pb-bar{min-height:56px;padding:8px 16px}
+  .pb.lay-radio .pb-bar img{display:none}
+  .pb.lay-radio .pb-radio{display:flex}
+
+  @media (max-width:900px){
+    .app{grid-template-columns:1fr}
+    .side{display:none}
+    .kpis,.mgrid{grid-template-columns:1fr 1fr}
+    .editor,.two-col,.pdp,.abgrid{grid-template-columns:1fr}
+    .previewcol{position:static}
+    .wrap{padding:16px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ======== SHOPIFY ADMIN SIDEBAR ======== -->
+  <aside class="side">
+    <div class="logo"><i></i>Pleena</div>
+    <div class="search"><span>Search</span><span>Ctrl K</span></div>
+    <nav class="nav">
+      <a class="dim"><span class="ico"></span>Home</a>
+      <a class="dim"><span class="ico"></span>Orders<span class="count">81</span></a>
+      <a class="dim"><span class="ico"></span>Products</a>
+      <a class="dim"><span class="ico"></span>Customers</a>
+      <a class="dim"><span class="ico"></span>Growth</a>
+      <a class="dim"><span class="ico"></span>Discounts</a>
+      <a class="dim"><span class="ico"></span>Content</a>
+      <a class="dim"><span class="ico"></span>Markets</a>
+      <a class="dim"><span class="ico"></span>Finance</a>
+      <a class="dim"><span class="ico"></span>Analytics</a>
+      <div class="group">Sales channels ›</div>
+      <a class="dim"><span class="ico"></span>Online Store</a>
+      <a class="dim"><span class="ico"></span>Facebook &amp; Instagram</a>
+      <div class="group">Apps ›</div>
+      <a class="appitem" data-go="deals"><span class="ico"></span>Pleena Bundles</a>
+      <div class="sub" id="subnav">
+        <a data-go="translations">Translations</a>
+        <a data-go="analytics">Analytics</a>
+        <a data-go="settings">Settings</a>
+        <a data-go="store">Store preview (demo)</a>
+      </div>
+      <a class="dim"><span class="ico"></span>Shogun - A/B Testing</a>
+      <div class="group"></div>
+      <a class="dim"><span class="ico"></span>Settings</a>
+    </nav>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="topbar"><span class="appicon"></span><b>Onnexa Bundles</b></div>
+    <div class="wrap">
+      <div class="mock-note" id="mockNote">⚙️ <div><b>Conectado a tu tienda.</b> Publish crea los packs, la oferta y los regalos. Las métricas y el A/B llegan en la Fase 3: lo que ves en Analytics todavía es de ejemplo.</div><button onclick="this.parentNode.remove()" aria-label="Cerrar">×</button></div>
+
+      <!-- ===================== BUNDLE DEALS (home) ===================== -->
+      <section id="v-deals">
+        <div class="card">
+          <div class="row between">
+            <div class="row"><h2 style="font-size:20px">Overview</h2><span class="pill"><span class="dot"></span>Store widget is enabled</span></div>
+            <div class="row">
+              <div class="seg" id="ovSeg"><button data-p="24h">24 hours</button><button data-p="7d" class="on">7 days</button><button data-p="30d">30 days</button><button data-p="all">All time</button></div>
+              <button class="btn sm" data-go="analytics">〰 View full analytics</button>
+            </div>
+          </div>
+          <div class="kpis" id="kpis"></div>
+        </div>
+
+        <div class="card">
+          <div class="row between">
+            <h2 style="font-size:14px">Bundle deals</h2>
+            <div class="row"><button class="btn sm" data-brand>🎨 Brand colors</button><button class="btn dark sm" id="newDeal">⊕ Create bundle deal</button></div>
+          </div>
+          <div class="row between" style="margin:14px 0 8px">
+            <div class="tabs" id="dealTabs">
+              <button class="on" data-f="all">All deals</button><button data-f="active">Active</button><button data-f="inactive">Inactive</button><button data-f="scheduled">Scheduled</button><button data-f="archived">A/B test archive</button>
+            </div>
+            <div class="row" style="position:relative">
+              <input id="dealSearch" class="searchbox hide" placeholder="Search deals">
+              <button class="btn sm" id="searchBtn" title="Search and filter">🔍 ☰</button>
+              <button class="btn sm" id="colsBtn"><span id="colsCount">(6)</span> Performance metrics ▾</button>
+              <div class="dropdown hide" id="colsMenu"></div>
+            </div>
+          </div>
+          <div class="bulkbar hide" id="bulkbar"><b id="bulkCount"></b><button class="btn sm" data-bulk="active">Activate</button><button class="btn sm" data-bulk="inactive">Deactivate</button><button class="btn sm" data-bulk="dup">Duplicate</button></div>
+          <div class="tablewrap"><table><thead id="dealHead"></thead><tbody id="dealRows"></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- ===================== BUNDLE DEAL EDITOR ===================== -->
+      <section id="v-editor" class="hide">
+        <div class="editor">
+          <div class="epanel">
+            <div class="ehead"><button class="back" data-go="deals" aria-label="Back">←</button><b>Bundle deal</b><span class="spacer"></span><button class="btn sm" data-brand>🎨 Brand colors</button><button class="btn sm" data-go="translations">文A Translations</button></div>
+            <div id="editorPanel"></div>
+          </div>
+          <div class="previewcol">
+            <div class="card" style="margin:0">
+              <div class="row between"><b>Preview ↗</b><button class="btn sm" id="setupAB">⚗ Setup A/B test</button></div>
+              <div class="preview-head">
+                <div class="field"><label>Product previewing</label><select><option>Reedle Shot™ — Menos Caída, Más…</option></select></div>
+                <div class="field"><label>Country previewing</label><select><option>Mexico</option></select></div>
+              </div>
+              <div class="stage"><div id="previewWidget" class="pb"></div></div>
+            </div>
+            <div class="toolbar-save"><button class="btn sm" id="draftBtn">Save as draft</button><button class="btn dark sm" id="publishBtn">Publish</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== ANALYTICS ===================== -->
+      <section id="v-analytics" class="hide">
+        <div class="row" style="margin-bottom:12px">
+          <select class="btn sm"><option>All bundle deals</option><option>Pleena - PDRN Reedle Shot</option></select>
+          <select class="btn sm"><option>Last 30d</option><option>Last 7d</option></select>
+          <select class="btn sm"><option>Previous period</option></select>
+          <span class="spacer"></span>
+          <label class="toggle-l"><button class="switch" id="abInsights" aria-label="A/B test insights"></button>A/B test insights (beta)</label>
+          <button class="btn sm" id="csvBtn">⇪ Export as CSV</button>
+        </div>
+        <div class="card">
+          <h2>Metrics over time</h2>
+          <div class="mgrid" id="mgrid"></div>
+          <div class="chartbox"><div style="font-weight:600;margin-bottom:6px" id="chartTitle">Revenue</div><div id="chart"></div>
+            <div class="legend"><span>13 Sep - 12 Oct, 2026 (UTC)</span><span class="prev">14 Aug - 12 Sep, 2026 (UTC)</span></div></div>
+        </div>
+        <div class="card">
+          <div class="row between"><h2>Bundles</h2><button class="btn sm">(5) Performance metrics ▾</button></div>
+          <div class="tablewrap" style="margin-top:12px"><table>
+            <thead><tr><th>Bundle</th><th class="num">Revenue ⇣</th><th class="num">Bundle orders</th><th class="num">Visitors</th><th class="num">AOV</th><th class="num">Revenue / visitor</th></tr></thead>
+            <tbody id="aRows"></tbody></table></div>
+        </div>
+        <div class="card">
+          <div class="row between"><h2>Features</h2><button class="btn sm">(5) Performance metrics ▾</button></div>
+          <div class="tablewrap" style="margin-top:12px"><table>
+            <thead><tr><th>Feature</th><th class="num">Orders with feature</th><th class="num">% of orders</th><th class="num">Attributed revenue</th><th class="num">AOV (with feature)</th><th class="num">Profit (with feature)</th></tr></thead>
+            <tbody id="fRows"></tbody></table></div>
+        </div>
+        <div class="card">
+          <div class="row between"><h2>Products</h2><button class="btn sm">(5) Performance metrics ▾</button></div>
+          <div class="tablewrap" style="margin-top:12px"><table>
+            <thead><tr><th>Product</th><th class="num">Orders</th><th class="num">Revenue ⇣</th><th class="num">Bundle orders</th><th class="num">AOV</th><th class="num">Profit</th></tr></thead>
+            <tbody><tr><td><div class="row nowrap"><img src="https://pleena.com/cdn/shop/files/Rds-Hero-ezgif.com-png-to-webp-converter.webp?height=80" alt="" style="width:28px;height:28px;border-radius:6px;object-fit:cover;background:#f6efec">Reedle Shot™ — Menos Caída, Más Crecimie…</div></td><td class="num">31</td><td class="num">MX$25,950</td><td class="num">24</td><td class="num">MX$837.09</td><td class="num">-</td></tr></tbody></table></div>
+        </div>
+        <div class="two-col">
+          <div class="card"><h2>Funnel</h2>
+            <div class="legend" style="justify-content:flex-end;margin:6px 0 10px"><span>13 Sep - 12 Oct, 2026</span><span class="prev">14 Aug - 12 Sep, 2026</span></div>
+            <div class="funnel" id="funnel"></div></div>
+          <div class="card"><h2>Quantity by Order Share</h2><div id="donut" style="display:flex;align-items:center;gap:18px;margin-top:14px;flex-wrap:wrap"></div></div>
+        </div>
+        <div class="card"><h2>Order Share by Location ⓘ</h2>
+          <div class="legend" style="justify-content:flex-end;margin:6px 0 10px"><span>13 Sep - 12 Oct, 2026</span><span class="prev">14 Aug - 12 Sep, 2026</span></div>
+          <div>Mexico</div>
+          <div class="row nowrap" style="margin-top:6px"><div style="height:14px;width:62%;border:1.5px solid var(--violet);border-radius:8px;background:#f7f4ff"></div><span>100%</span></div>
+          <div class="row nowrap" style="margin-top:4px"><div style="height:14px;width:2px;border-left:2px dashed #b9a5ff"></div><span class="hint">0%</span></div>
+        </div>
+      </section>
+
+      <!-- ===================== TRANSLATIONS ===================== -->
+      <section id="v-translations" class="hide">
+        <div class="card">
+          <div class="row between"><h2 style="font-size:20px">Translations</h2><div class="field" style="margin:0;width:220px"><select id="langSel"><option>Spanish (Mexico) — default</option><option>English</option></select></div></div>
+          <div class="hint" style="margin:6px 0 12px">Textos del bloque por idioma. Si tu tienda solo vende en español, no tienes que tocar nada aquí.</div>
+          <div class="tablewrap"><table><thead><tr><th>Text</th><th>Default</th><th>Translation</th></tr></thead><tbody id="trRows"></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- ===================== SETTINGS ===================== -->
+      <section id="v-settings" class="hide">
+        <div class="card">
+          <h2 style="font-size:20px;margin-bottom:14px">Settings</h2>
+          <div style="border:1px solid var(--line);border-radius:12px;padding:16px">
+            <b style="font-size:14px">Privacy</b>
+            <div style="font-weight:600;margin:12px 0 6px">Communication Preferences</div>
+            <label class="chk"><input type="checkbox" checked> Email notifications</label>
+            <label class="chk"><input type="checkbox" checked> Phone notifications</label>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== STORE PREVIEW (demo) ===================== -->
+      <section id="v-store" class="hide">
+        <div class="pdp">
+          <div class="gallery"><img src="https://pleena.com/cdn/shop/files/Rds-Hero-ezgif.com-png-to-webp-converter.webp?height=600" alt="Reedle Shot" onerror="this.style.display='none'"></div>
+          <div>
+            <div class="stars">★★★★★</div>
+            <h1>Reedle Shot™ — Menos Caída, Más Crecimiento y Más Densidad</h1>
+            <div style="margin:0 0 16px;color:#555">Así se ve tu bloque en la página de producto.</div>
+            <div id="storeWidget" class="pb"></div>
+            <button class="atc" id="atcBtn">Agregar al carrito</button>
+          </div>
+        </div>
+        <div class="explain"><b>¿Qué pasa al dar "Agregar al carrito"?</b>
+          <ol><li>Se agrega el paquete elegido con una marca oculta (<code>_pb_deal</code>, <code>_pb_bar</code>) para la analítica.</li>
+          <li>Se agregan los regalos desbloqueados (guías digitales) a $0.</li>
+          <li>El envío gratis lo da un descuento de envío automático de Shopify.</li></ol></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- A/B test side by side -->
+<div class="modal" id="abModal"><div class="box">
+  <div class="row between"><div><h2 style="font-size:18px" id="abTitle"></h2><div class="hint" id="abSub"></div></div><button class="btn sm" data-close>Close</button></div>
+  <div class="split" id="abSplit"></div>
+  <div class="abgrid" id="abGrid"></div>
+</div></div>
+
+<!-- Brand colors -->
+<div class="modal" id="brandModal"><div class="box small">
+  <div class="row between"><h2 style="font-size:16px">Brand colors</h2><button class="btn sm" data-close>Close</button></div>
+  <p class="hint">Un color pinta bordes, etiquetas, badges y fondos seleccionados de tus bloques.</p>
+  <div class="field"><label>Brand color</label><div class="sw" style="width:120px"><input type="color" id="brandInput" value="#c9a08f"><span id="brandHex">#c9a08f</span></div></div>
+  <button class="btn dark block" id="brandApply">Apply to all deals</button>
+</div></div>
+
+<!-- Cart demo -->
+<div class="drawer" id="drawer"><div class="panel">
+  <div class="row between"><h2 style="font-size:18px">Tu carrito</h2><button class="btn sm" id="closeDrawer">Cerrar</button></div>
+  <div id="cartLines"></div>
+  <div class="row between" style="margin-top:12px;font-size:15px"><b>Total</b><b id="cartTotal"></b></div>
+  <div style="margin-top:16px;font-weight:600">Lo que el bloque manda a Shopify (<code>/cart/add.js</code>):</div>
+  <div class="code" id="cartCode"></div>
+</div></div>
+
+<script>
+/* =====================================================================
+   DATOS — reales de tu oferta en Kaching (Reedle Shot)
+   ===================================================================== */
+const CDN = "https://cdn.shopify.com/s/files/1/1012/1478/1808/files/";
+let UNIT_PRICE = 699, UNIT_COMPARE = 1050; // el panel los cambia según el producto abierto
+const state = {
+  name: "Pleena - PDRN Reedle Shot",
+  blockTitle: "Llévate más por menos",
+  discountName: "",
+  market: "Mexico",
+  settings: { excludeB2b:false, onlyWidget:false, startDate:"2026-09-23", startTime:"21:11", hasEnd:false, endDate:"2026-11-30",
+    diffVariants:true, hideVariantPicker:true, hideUnavailable:false, noSync:false,
+    perItem:false, compareAt:true, noDecimals:true, rounding:false, updateThemePrice:false, totalInAtc:false,
+    skipCart:false, lowStock:false },
+  preselected: 1,
+  bars: [
+    {qty:1, priceType:"fixed", value:599,  title:"Compra 1", subtitle:"Ahorra {{saved_total}}", label:"Suministro 45 días", qtySelector:false, soldOut:false, img:CDN+"Kaching-Bundles-ChatGPT_Image_Sep_23_2026_09_11_47_PM_300x300.png?v=1790215936"},
+    {qty:2, priceType:"fixed", value:799,  title:"Compra 2", subtitle:"Ahorra {{saved_total}}", label:"Suministro 3 meses", qtySelector:false, soldOut:false, img:CDN+"generated-1790215961801_300x300.png?v=1790215965"},
+    {qty:3, priceType:"fixed", value:1199, title:"Compra 3", subtitle:"Ahorra {{saved_total}}", label:"Suministro 5 meses", qtySelector:false, soldOut:false, img:CDN+"generated-1790216053886_300x300.png?v=1790216057"},
+  ],
+  badges: [{bar:1, style:"simple", text:"Más elegido hoy", size:12, color:"#ffffff", bg:"#c9a08f"}],
+  on: { badges:true, volume:false, timer:false, scratch:false, subs:false, checkbox:false, gifts:true, sticky:false },
+  timer: { minutes:15, text:"La oferta termina en" },
+  gifts: { title:"🎁 Regalos Gratis por tu compra", subtitle:"", items:[
+    {type:"shipping", unlockAt:1, only:false, qty:1, label:"Gratis", crossed:"", title:"Envío Gratis a Todo México", locked:"Bloqueado", img:CDN+"carrito-envio-pleena-transparente-ezgif.com-jpg-to-webp-converter_300x300.webp?v=1785035130", excludeRates:false, subsOnly:false},
+    {type:"product", product:"Guía Digital - Recupera la Densidad de tu Cabello", value:270, variant:54362771816816, unlockAt:2, only:false, qty:1, label:"Gratis", crossed:"{{original_total}}", title:"{{product}}", locked:"Llévala al comprar 2", img:CDN+"ImagendeCodex24sept2026_18_30_37.png?v=1790294262", subsOnly:false},
+    {type:"product", product:"Guía digital: 7 Hábitos Anticaída", value:150, variant:54074627719536, unlockAt:3, only:false, qty:1, label:"Gratis", crossed:"{{original_total}}", title:"{{product}}", locked:"Llévala al comprar 3", img:CDN+"portada-7-habitos-caida-cabello-pleena.png?v=1785034501", subsOnly:false},
+  ]},
+  layout: "vertical",
+  style: { radius:8, spacing:10, font:"theme",
+    colors: { cardBg:"#ffffff", selectedBg:"#f4ece8", border:"#c9a08f", blockTitle:"#000000",
+      title:"#000000", subtitle:"#555555", price:"#000000", fullPrice:"#555555",
+      labelBg:"#c9a08f", labelText:"#ffffff",
+      giftBg:"#ffffff", giftText:"#000000", giftSelBg:"#f4ece8", giftSelText:"#000000",
+      pillBg:"#ffffff", pillText:"#000000", pillBorder:"#b3b3b3", pillSelBg:"#000000", pillSelText:"#ffffff", pillSelBorder:"#000000",
+      upsellBg:"#ffffff", upsellText:"#000000", upsellSelBg:"#cccccc", upsellSelText:"#000000" },
+    fonts: { blockTitle:[14,"bold"], title:[17,"medium"], subtitle:[13,"medium-italic"], label:[11,"medium-italic"],
+      price:[17,"bold"], giftsTitle:[20,"bold"], gift:[13,"medium-italic"], upsell:[13,"bold"] } },
+};
+
+const deals = [
+  {name:"Pleena - PDRN Reedle Shot", prod:"Reedle Shot™ — Menos Caída, M…", created:"Sep 23, 2026", visitors:2540, cr:1.4, rpv:11.66, aov:822.92, added:8121, total:29625, status:"active", atcRate:7.3, cost:180, share:[.226,0,.774], prices:[599,799,1199],
+    test:{age:"4d 6h", variants:[
+      {name:"A variant", note:"Compra 3 a $1,199 (actual)", visitors:1290, cr:1.5, rpv:12.10, aov:818.07, added:4260, total:15610, atcRate:7.6, cost:180, share:[.22,0,.78], prices:[599,799,1199]},
+      {name:"B variant", note:"Compra 3 a $1,249", visitors:1250, cr:1.3, rpv:11.21, aov:827.80, added:3861, total:14015, atcRate:7.0, cost:180, share:[.25,0,.75], prices:[599,799,1249]}]}},
+  {name:"Pleena - Growturn mx", prod:"Pleena™ — Frena la Caída, Estim…", created:"Jul 2, 2026", visitors:1871, cr:1.7, rpv:14.02, aov:846.45, added:5621, total:26240, status:"active", atcRate:6.1, cost:170, share:[.31,.42,.27], prices:[699,999,1299]},
+  {name:"Pleena - Digestive", prod:"Pleena™ Apoyo Digestivo Diario p…", created:"Jun 17, 2026", visitors:473, cr:0.8, rpv:6.33, aov:749.03, added:250, total:2996, status:"active", atcRate:4.2, cost:150, share:[.5,.25,.25], prices:[599,899,1199]},
+  {name:"Buen Fin - Reedle Shot", prod:"Reedle Shot™ — Menos Caída, M… (demo)", created:"Starts Nov 13, 2026", visitors:0, cr:0, rpv:0, aov:0, added:0, total:0, status:"scheduled", atcRate:0, cost:180, share:[0,0,0], prices:[549,749,999]},
+  {name:"Bundle #4", prod:"Pleena™ Apoyo Digestivo Diario p…", created:"Jun 17, 2026", visitors:1, cr:0, rpv:0, aov:0, added:0, total:0, status:"inactive", atcRate:0, cost:150, share:[0,0,0], prices:[599,899,1199]},
+  {name:"Collar abrazo eterno (Copy)", prod:"Collar Abrazo Eterno | Cerca de s…", created:"Apr 22, 2026", visitors:80, cr:0, rpv:0, aov:0, added:0, total:0, status:"inactive", atcRate:2, cost:90, share:[0,0,0], prices:[499,799,999]},
+  {name:"Collar Relato Eterno", prod:"Collar Relato Eterno | Un regalo c…", created:"Apr 19, 2026", visitors:280, cr:1.4, rpv:9.65, aov:675.25, added:400, total:2701, status:"inactive", atcRate:5, cost:90, share:[.5,.5,0], prices:[499,799,999]},
+  {name:"Collar abrazo eterno", prod:"Collar Abrazo Eterno | Cerca de s…", created:"Apr 17, 2026", visitors:568, cr:1.1, rpv:6.49, aov:614, added:500, total:3684, status:"inactive", atcRate:4.5, cost:90, share:[.67,.33,0], prices:[499,799,999]},
+  {name:"Pleena - PDRN Reedle Shot (A/B)", prod:"Winner: A variant · Compra 3 $1,199 vs $1,299 (demo)", created:"Oct 2, 2026", visitors:1210, cr:1.3, rpv:10.4, aov:871.2, added:3100, total:12584, status:"archived", atcRate:7, cost:180, share:[.2,0,.8], prices:[599,799,1199]},
+];
+
+/* =====================================================================
+   UTILIDADES
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const mx = (n,d=0) => "MX$"+Number(n).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const pct = v => (Math.round(v*10)/10).toLocaleString("en-US")+"%";
+const wm = n => { const d = state.settings.noDecimals ? 0 : 2; return "$ "+Number(n).toLocaleString("es-MX",{minimumFractionDigits:d,maximumFractionDigits:d}); };
+const getPath = (o,p) => p.split(".").reduce((a,k)=>a==null?a:a[k], o);
+const setPath = (o,p,v) => { const ks=p.split("."), last=ks.pop(); const t=ks.reduce((a,k)=>a[k],o); t[last]=v; };
+function toast(msg){ let t=document.querySelector(".toast"); if(!t){t=document.createElement("div");t.className="toast";document.body.appendChild(t);} t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2400); }
+function tint(hex,a){ const n=parseInt(hex.slice(1),16), c=[n>>16,(n>>8)&255,n&255].map(v=>Math.round(v*a+255*(1-a))); return "#"+c.map(v=>v.toString(16).padStart(2,"0")).join(""); }
+function darken(hex,a){ const n=parseInt(hex.slice(1),16), c=[n>>16,(n>>8)&255,n&255].map(v=>Math.round(v*(1-a))); return "#"+c.map(v=>v.toString(16).padStart(2,"0")).join(""); }
+
+/* =====================================================================
+   NAVEGACIÓN
+   ===================================================================== */
+const views = ["deals","editor","analytics","translations","settings","store"];
+function go(v){
+  views.forEach(x=>$("v-"+x).classList.toggle("hide", x!==v));
+  document.querySelectorAll("#subnav a").forEach(a=>a.classList.toggle("active", a.dataset.go===v));
+  if(v==="store") renderStore();
+  if(v==="editor") renderEditor();
+  if(v==="translations") renderTranslations();
+  $("main").scrollTop=0;
+}
+document.addEventListener("click", e=>{
+  const g=e.target.closest("[data-go]"); if(g){ e.preventDefault(); go(g.dataset.go); }
+  if(e.target.closest("[data-brand]")) openModal("brandModal");
+  if(e.target.closest("[data-close]")) e.target.closest(".modal").classList.remove("open");
+});
+function openModal(id){ $(id).classList.add("open"); }
+document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{ if(e.target===m) m.classList.remove("open"); }));
+
+/* =====================================================================
+   WIDGET (lo que ve el cliente)
+   ===================================================================== */
+const lockSvg = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1h1zm2 0h6V7a3 3 0 0 0-6 0v3z"/></svg>`;
+const FONT = { regular:["normal",400], medium:["normal",500], bold:["normal",700], italic:["italic",400], "medium-italic":["italic",500], "bold-italic":["italic",700] };
+function barPrice(b){ const base=UNIT_PRICE*b.qty;
+  if(b.priceType==="fixed") return b.value;
+  if(b.priceType==="percent") return Math.round(base*(1-b.value/100)*100)/100;
+  if(b.priceType==="amount") return Math.max(0, base-b.value);
+  return base; }
+const fullPrice = b => (state.settings.compareAt ? UNIT_COMPARE : UNIT_PRICE) * b.qty;
+const fill = (t,v) => String(t||"").replace(/\{\{\s*(\w+)\s*\}\}/g,(m,k)=> k in v ? v[k] : m);
+function barVars(b, price){ const full=fullPrice(b), saved=Math.max(0, full-price);
+  return { saved_total:wm(saved), saved_percentage:(full?Math.round(saved/full*100):0)+"%", price_per_item:wm(price/b.qty), quantity:b.qty, original_total:wm(full), total:wm(price) }; }
+const giftOn = (g, bar, barIndex) => g.only ? barIndex === g.unlockAt-1 : bar.qty >= (state.bars[g.unlockAt-1]||{qty:99}).qty;
+
+function applyStyle(el){
+  const S=state.style;
+  el.className = "pb lay-"+state.layout;
+  el.style.fontFamily = S.font==="theme" ? "Roboto, sans-serif" : S.font;
+  el.style.setProperty("--pb-r", S.radius+"px");
+  el.style.setProperty("--pb-gap", S.spacing+"px");
+  el.style.setProperty("--pb-nb", state.bars.length);
+  Object.entries(S.colors).forEach(([k,v])=>el.style.setProperty("--pb-"+k, v));
+  Object.entries(S.fonts).forEach(([k,[size,st]])=>{ const [fs,fw]=FONT[st]||FONT.regular;
+    el.style.setProperty(`--pb-${k}-size`, size+"px"); el.style.setProperty(`--pb-${k}-style`, fs); el.style.setProperty(`--pb-${k}-weight`, fw); });
+}
+/* prices: precios de una variante A/B; si no, los del editor */
+function widgetHTML(sel, prices){
+  const s=state, bar=s.bars[sel]||s.bars[0];
+  let h="";
+  if(s.on.timer) h += `<div class="pb-timer">⏰ ${esc(s.timer.text)} <b class="pb-clock">${fmtClock()}</b></div>`;
+  h += `<div class="pb-title">${esc(s.blockTitle)}</div><div class="pb-bars">`;
+  s.bars.forEach((b,i)=>{
+    const price = prices && prices[i]!=null ? prices[i] : barPrice(b);
+    const v = barVars(b, price), full = fullPrice(b), shown = s.settings.perItem ? price/b.qty : price;
+    const badges = s.on.badges ? s.badges.filter(x=>x.bar===i) : [];
+    h += `<div class="pb-bar ${b.soldOut?"soldout":""}" role="radio" aria-checked="${i===sel}" data-i="${i}">
+      ${badges.map(x=>`<span class="pb-badge ${x.style}" style="background:${x.bg};color:${x.color};font-size:${x.size}px;--fold:${darken(x.bg,.35)}">${esc(fill(x.text,v))}</span>`).join("")}
+      <span class="pb-radio"></span>
+      <img src="${b.img}" alt="" onerror="this.style.visibility='hidden'">
+      <div class="pb-mid"><div class="pb-l1"><span class="pb-bt">${esc(fill(b.title,v))}</span>${b.label?`<span class="pb-label">${esc(fill(b.label,v))}</span>`:""}</div>
+        ${b.subtitle?`<div class="pb-sub">${esc(fill(b.soldOut?"Agotado":b.subtitle,v))}</div>`:""}
+        ${b.qtySelector?`<div class="pb-qty"><i>−</i><span>${b.qty}</span><i>+</i></div>`:""}</div>
+      <div class="pb-right"><div class="pb-price">${wm(shown)}${s.settings.perItem?"<small>c/u</small>":""}</div>${full>price?`<div class="pb-full">${wm(s.settings.perItem?full/b.qty:full)}</div>`:""}</div>
+    </div>`;
+  });
+  h += `</div>`;
+  if(s.on.gifts && s.gifts.items.length){
+    h += `<div class="pb-gt">${esc(s.gifts.title)}</div>${s.gifts.subtitle?`<div class="pb-gs">${esc(s.gifts.subtitle)}</div>`:""}<div class="pb-gifts" style="--pb-n:${s.gifts.items.length}">`;
+    s.gifts.items.forEach(g=>{
+      const on=giftOn(g,bar,sel), gv={product:g.product||"", original_total:g.value?wm(g.value):""};
+      const crossed=fill(g.crossed,gv);
+      h += `<div class="pb-gift ${on?"on":""}"><span class="pb-tag">${esc(fill(g.label,gv))}${crossed?`<s>${esc(crossed)}</s>`:""}</span>
+        ${on? `<img src="${g.img}" alt="" onerror="this.style.visibility='hidden'">` : lockSvg}
+        <div class="pb-gname">${esc(on? fill(g.title,gv) : fill(g.locked,gv))}</div></div>`;
+    });
+    h += `</div>`;
+  }
+  return h;
+}
+function mountWidget(el, sel, prices){ applyStyle(el); el.innerHTML = widgetHTML(sel, prices); }
+let timerLeft=null;
+function fmtClock(){ if(timerLeft===null) timerLeft=state.timer.minutes*60; const m=Math.floor(timerLeft/60), s=timerLeft%60; return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`; }
+setInterval(()=>{ if(!state.on.timer) return; timerLeft=Math.max(0,(timerLeft??state.timer.minutes*60)-1); document.querySelectorAll(".pb-clock").forEach(el=>el.textContent=fmtClock()); },1000);
+
+let previewSel=state.preselected, storeSel=state.preselected;
+function renderPreview(){ mountWidget($("previewWidget"), previewSel); }
+function renderStore(){
+  mountWidget($("storeWidget"), storeSel);
+  const b=state.bars[storeSel];
+  $("atcBtn").textContent = (state.settings.skipCart?"Comprar ahora":"Agregar al carrito") + (state.settings.totalInAtc?` — ${wm(barPrice(b))}`:"");
+}
+$("previewWidget").addEventListener("click",e=>{const b=e.target.closest("[data-i]"); if(b){previewSel=+b.dataset.i; renderPreview();}});
+$("storeWidget").addEventListener("click",e=>{const b=e.target.closest("[data-i]"); if(b){storeSel=+b.dataset.i; renderStore();}});
+
+/* =====================================================================
+   OVERVIEW
+   ===================================================================== */
+function spark(points){
+  const w=110,h=34,max=Math.max(...points),min=Math.min(...points);
+  const d=points.map((p,i)=>`${i?"L":"M"}${(i/(points.length-1)*w).toFixed(1)},${(h-3-(p-min)/(max-min||1)*(h-6)).toFixed(1)}`).join(" ");
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><path d="${d}" fill="none" stroke="#8051ff" stroke-width="2" stroke-linecap="round"/></svg>`;
+}
+/* 7 y 30 días: tus números reales de Kaching. 24 hours y All time: demo */
+const overview = {
+  "24h":{label:"24 hours", k:[["MX$612","8.20%","up"],["MX$818.50","3.10%","up"],["80.0%","2.00%","down"],["MX$8.90","5.40%","down"]], pts:[[2,3,2,4,3,5,4],[5,5,6,5,6,6,6],[6,5,6,6,5,5,5],[4,5,4,3,4,3,3]]},
+  "7d": {label:"7 days",   k:[["MX$3,801","12.00%","down"],["MX$799.04","6.00%","down"],["84.2%","10.10%","up"],["MX$9.65","40.70%","down"]], pts:[[5,6,6.5,5.5,4.5,4.6,3],[7,6.6,6.5,6.3,6.4,6.3,4],[7,6,6,7,7,7,3],[4,5.5,5.6,5.2,4.8,5.6,3.2]]},
+  "30d":{label:"30 days",  k:[["MX$7,441","2299.4%","up"],["MX$837.09","2.00%","down"],["77.4%","0.00%","up"],["MX$10.89","133.2%","up"]], pts:[[0,0,0,2,5,6,7],[0,0,0,6,6,7,6],[0,0,0,7,7,7,7],[0,0,0,3,5,6,6]]},
+  "all":{label:"All time", k:[["MX$14,892","—","up"],["MX$812.40","—","up"],["79.1%","—","up"],["MX$9.12","—","up"]], pts:[[1,2,2,3,4,5,7],[5,6,6,6,7,7,7],[5,6,6,7,7,7,7],[3,4,4,5,5,6,6]]},
+};
+let ovPeriod="7d";
+function renderKpis(){
+  const titles=["Added revenue","Average order value","Orders with bundles","Revenue per visitor"], o=overview[ovPeriod];
+  $("kpis").innerHTML = titles.map((t,i)=>{ const [v,d,dir]=o.k[i]; return `
+    <div class="kpi"><div class="t"><i></i>${t}</div>
+      <div class="row between nowrap"><div><div class="v">${v}</div><div class="delta ${dir}">${dir==="up"?"↗":"↘"} ${d}</div></div>${spark(o.pts[i])}</div>
+      <div class="d">${o.label}</div></div>`; }).join("");
+}
+$("ovSeg").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return;
+  [...e.currentTarget.children].forEach(x=>x.classList.toggle("on",x===b)); ovPeriod=b.dataset.p; renderKpis(); });
+
+/* =====================================================================
+   BUNDLE DEALS TABLE
+   ===================================================================== */
+const orders = d => d.aov ? Math.round(d.total/d.aov) : 0;
+const COLS = [ /* mismo orden que el menú "Performance metrics" de Kaching */
+  {k:"visitors", l:"Visitors",            on:true,  v:d=>d.visitors.toLocaleString("en-US")},
+  {k:"cr",       l:"CR",                  on:true,  v:d=>pct(d.cr)},
+  {k:"aov",      l:"AOV",                 on:true,  v:d=>mx(d.aov,2)},
+  {k:"added",    l:"Added revenue",       on:true,  v:d=>mx(d.added)},
+  {k:"total",    l:"Total revenue",       on:true,  v:d=>mx(d.total)},
+  {k:"atc",      l:"Add to cart",         on:false, v:d=>Math.round(d.visitors*d.atcRate/100).toLocaleString("en-US")},
+  {k:"atcr",     l:"Add to cart %",       on:false, v:d=>pct(d.atcRate)},
+  {k:"rpv",      l:"Revenue per visitor", on:true,  v:d=>mx(d.rpv,2)},
+  {k:"ppv",      l:"Profit per visitor",  on:false, v:d=>{ if(!d.visitors) return mx(0,2); const units=d.share.reduce((a,s,i)=>a+s*(i+1),0)*orders(d); return mx((d.total-units*d.cost)/d.visitors,2);} },
+  {k:"bundles",  l:"Bundles",             on:false, v:d=>orders(d)},
+  {k:"subs",     l:"Subscribed",          on:false, v:()=> "0"},
+  {k:"upsell",   l:"Upsell %",            on:false, v:()=> "0%"},
+];
+const TABLE_ORDER = ["visitors","cr","rpv","aov","added","total","atc","atcr","ppv","bundles","subs","upsell"];
+let dealFilter="all", dealQuery="", openRows=new Set(), selected=new Set(), menuFor=null;
+const statusMatch = d => dealFilter==="all" ? d.status!=="archived" : d.status===dealFilter;
+const statusDot = d => `<span class="dot ${({active:"",inactive:"off",scheduled:"sched",archived:"arch"})[d.status]}"></span>`;
+function barsRow(d, span){
+  const n=orders(d);
+  return `<tr class="sub"><td colspan="${span}"><table class="subtbl"><thead><tr><th>Bar</th><th class="num">Price</th><th class="num">Orders</th><th class="num">% of orders</th><th class="num">Revenue</th></tr></thead><tbody>
+    ${d.prices.map((p,j)=>{ const o=Math.round(n*d.share[j]); return `<tr><td>Bar #${j+1} - Compra ${j+1}</td><td class="num">${mx(p)}</td><td class="num">${o}</td><td class="num">${pct(d.share[j]*100)}</td><td class="num">${mx(o*p)}</td></tr>`; }).join("")}
+    </tbody></table></td></tr>`;
+}
+function renderDeals(){
+  const cols = TABLE_ORDER.map(k=>COLS.find(c=>c.k===k)).filter(c=>c.on);
+  $("colsCount").textContent = `(${COLS.filter(c=>c.on).length})`;
+  const rows = deals.map((d,i)=>({d,i})).filter(({d})=>statusMatch(d) && d.name.toLowerCase().includes(dealQuery.toLowerCase()));
+  const allSel = rows.length && rows.every(r=>selected.has(r.i));
+  $("dealHead").innerHTML = `<tr><th class="cb"><input type="checkbox" id="selAll" ${allSel?"checked":""} aria-label="Select all"></th><th style="width:24px"></th><th>Deal</th><th>Created</th>${cols.map(c=>`<th class="num"><u>${c.l}</u></th>`).join("")}<th>Actions</th></tr>`;
+  const span = cols.length + 5;
+  $("dealRows").innerHTML = rows.length ? rows.map(({d,i})=>{
+    const open = openRows.has(String(i));
+    const chip = d.status==="scheduled" ? `<span class="chip">Scheduled</span>` : d.status==="archived" ? `<span class="chip gray">Archived</span>` : "";
+    let h = `<tr class="click ${selected.has(i)?"sel":""}" data-edit="${i}">
+      <td class="cb"><input type="checkbox" data-sel="${i}" ${selected.has(i)?"checked":""} aria-label="Select"></td>
+      <td><button class="chevbtn ${open?"open":""}" data-expand="${i}" aria-label="Show A/B test">›</button></td>
+      <td class="deal-name"><div class="row nowrap">${statusDot(d)}<div><b>${esc(d.name)}${chip}</b><span class="sub">${esc(d.prod)}</span></div>${d.test?`<span class="chip ab" data-abchip="${i}" title="View A/B test">A/B</span>`:""}</div></td>
+      <td style="white-space:nowrap">${d.created}</td>
+      ${cols.map(c=>`<td class="num">${c.v(d)}</td>`).join("")}
+      <td style="position:relative"><div class="row nowrap">
+        ${d.status==="archived" ? "" : `<button class="switch ${d.status==="active"?"on":""}" data-toggle="${i}" aria-label="Toggle deal"></button>`}
+        <button class="kebab" data-menu="${i}" aria-label="More actions">⋮</button>
+        ${d.status==="active" && !d.test ? `<button class="btn sm" data-smart="${i}">⚗ Smart test</button>` : ""}
+      </div>
+      ${menuFor===i ? `<div class="menu"><button data-act="edit">Edit</button><button data-act="dup">Duplicate</button><button data-act="schedule">Schedule</button><button data-act="archive">Archive</button><button data-act="delete" class="danger">Delete</button></div>` : ""}
+      </td></tr>`;
+    if(open){
+      if(d.test){
+        d.test.variants.forEach((v,j)=>{
+          const key=i+"-"+j, vopen=openRows.has(key);
+          h += `<tr class="subv"><td class="cb"></td>
+            <td><button class="chevbtn ${vopen?"open":""}" data-expand="${key}" aria-label="Show bars">›</button></td>
+            <td><div class="vname">${esc(v.name)} <button class="eye" data-preview="${i}" title="Preview variant">👁</button><span>${esc(v.note)}</span></div></td>
+            <td style="white-space:nowrap">${d.test.age}</td>
+            ${cols.map(c=>`<td class="num">${c.v(v)}</td>`).join("")}
+            <td>${j===0?"":`<button class="btn sm" data-winner="${i}-${j}">Pick winner</button>`}</td></tr>`;
+          if(vopen) h += barsRow(v, span);
+        });
+      } else {
+        h += `<tr class="sub"><td colspan="${span}"><div class="notest">No A/B test running for this deal. ${d.status==="active"?`<button class="btn sm" data-smart="${i}">⚗ Smart test</button>`:"Activate the deal to start one."}</div></td></tr>`;
+      }
+    }
+    return h;
+  }).join("") : `<tr><td colspan="${span}" style="text-align:center;color:var(--muted);padding:28px">No deals found</td></tr>`;
+  $("bulkbar").classList.toggle("hide", !selected.size);
+  $("bulkCount").textContent = `${selected.size} selected`;
+}
+function duplicate(i){ deals.splice(i+1,0,{...deals[i], name:deals[i].name+" (Copy)", created:"Oct 13, 2026", status:"inactive", visitors:0, cr:0, rpv:0, aov:0, added:0, total:0, share:[0,0,0], test:undefined}); selected.clear(); openRows.clear(); }
+function createTest(i){
+  const d=deals[i], zero={visitors:0, cr:0, rpv:0, aov:0, added:0, total:0, atcRate:0, cost:d.cost, share:[0,0,0]};
+  const last=d.prices.length-1, pB=[...d.prices]; pB[last]+=50;
+  d.test={age:"0d 0h", variants:[{...zero, name:"A variant", note:`Actual (Compra ${last+1} a $${d.prices[last].toLocaleString("en-US")})`, prices:[...d.prices]},{...zero, name:"B variant", note:`Compra ${last+1} a $${pB[last].toLocaleString("en-US")}`, prices:pB}]};
+}
+function chooseWinner(i,j){
+  const d=deals[i], w=d.test.variants[j];
+  deals.push({...d, name:`${d.name} (A/B)`, prod:`Winner: ${w.name} · ${w.note}`, created:"Oct 13, 2026", status:"archived", test:undefined});
+  d.prices=[...w.prices]; delete d.test; openRows.delete(String(i));
+  toast(`${w.name} is now live. The test was saved in A/B test archive`); renderDeals();
+}
+$("dealHead").addEventListener("click",e=>{
+  if(e.target.id!=="selAll") return;
+  e.target.checked ? deals.forEach((d,i)=>{ if(statusMatch(d)) selected.add(i); }) : selected.clear(); renderDeals();
+});
+$("dealRows").addEventListener("click",e=>{
+  const q=s=>e.target.closest(s);
+  if(q("[data-sel]")){ const i=+q("[data-sel]").dataset.sel; selected.has(i)?selected.delete(i):selected.add(i); renderDeals(); return; }
+  if(q("[data-expand]")){ const k=q("[data-expand]").dataset.expand; openRows.has(k)?openRows.delete(k):openRows.add(k); renderDeals(); return; }
+  if(q("[data-preview]")){ openAB(+q("[data-preview]").dataset.preview); return; }
+  if(q("[data-abchip]")){ openAB(+q("[data-abchip]").dataset.abchip); return; }
+  if(q("[data-winner]")){ const [i,j]=q("[data-winner]").dataset.winner.split("-").map(Number); chooseWinner(i,j); return; }
+  if(q("[data-toggle]")){ const d=deals[+q("[data-toggle]").dataset.toggle]; d.status = d.status==="active"?"inactive":"active"; toast(d.status==="active"?"Deal activated":"Deal deactivated"); renderDeals(); return; }
+  if(q("[data-menu]")){ const i=+q("[data-menu]").dataset.menu; menuFor = menuFor===i ? null : i; renderDeals(); return; }
+  if(q("[data-smart]")){ const i=+q("[data-smart]").dataset.smart; createTest(i); openRows.add(String(i)); toast("Smart test started: 50% of visitors see A, 50% see B"); renderDeals(); return; }
+  if(q("[data-act]")){
+    const a=q("[data-act]").dataset.act, i=menuFor; menuFor=null;
+    if(a==="edit"){ go("editor"); return; }
+    if(a==="dup"){ duplicate(i); toast("Deal duplicated"); }
+    if(a==="schedule"){ deals[i].status="scheduled"; toast("Deal scheduled"); }
+    if(a==="archive"){ deals[i].status="archived"; toast("Deal archived"); }
+    if(a==="delete"){ deals.splice(i,1); selected.clear(); openRows.clear(); toast("Deal deleted"); }
+    renderDeals(); return;
+  }
+  if(q("tr[data-edit]")) go("editor");
+});
+$("dealTabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return;
+  dealFilter=b.dataset.f; selected.clear(); [...e.currentTarget.children].forEach(x=>x.classList.toggle("on",x===b)); renderDeals(); });
+$("bulkbar").addEventListener("click",e=>{ const b=e.target.closest("[data-bulk]"); if(!b) return;
+  const ids=[...selected].sort((a,b)=>b-a);
+  if(b.dataset.bulk==="dup") ids.forEach(duplicate); else ids.forEach(i=>{ if(deals[i].status!=="archived") deals[i].status=b.dataset.bulk; });
+  toast(`${ids.length} deal${ids.length>1?"s":""} updated`); selected.clear(); renderDeals(); });
+$("searchBtn").onclick=()=>{ const s=$("dealSearch"); s.classList.toggle("hide"); if(!s.classList.contains("hide")) s.focus(); else { s.value=""; dealQuery=""; renderDeals(); } };
+$("dealSearch").addEventListener("input",e=>{ dealQuery=e.target.value; renderDeals(); });
+const colsMenu=$("colsMenu");
+$("colsBtn").onclick=e=>{ e.stopPropagation(); colsMenu.innerHTML=COLS.map((c,i)=>`<label><input type="checkbox" data-col="${i}" ${c.on?"checked":""}>${c.l}</label>`).join(""); colsMenu.classList.toggle("hide"); };
+colsMenu.addEventListener("click",e=>e.stopPropagation());
+colsMenu.addEventListener("change",e=>{ const i=e.target.dataset.col; if(i===undefined) return; COLS[+i].on=e.target.checked; renderDeals(); });
+document.addEventListener("click",e=>{
+  colsMenu.classList.add("hide");
+  if(menuFor!==null && !e.target.closest(".menu") && !e.target.closest("[data-menu]")){ menuFor=null; renderDeals(); }
+  if(!e.target.closest(".tokmenu") && !e.target.closest("[data-var]")) closeTok();
+});
+$("newDeal").onclick=()=>go("editor");
+
+/* =====================================================================
+   A/B TEST SIDE BY SIDE
+   ===================================================================== */
+let abDeal=null, abSel=[];
+function openAB(i){ const d=deals[i]; if(!d||!d.test) return; abDeal=i; abSel=d.test.variants.map(()=>state.preselected); renderAB(); openModal("abModal"); }
+function renderAB(){
+  const d=deals[abDeal], vs=d.test.variants, n=vs.length;
+  $("abTitle").textContent = `A/B test · ${d.name}`;
+  $("abSub").textContent = `Running for ${d.test.age} · traffic split ${vs.map(()=>Math.round(100/n)+"%").join(" / ")} · each visitor always sees the same variant`;
+  $("abSplit").innerHTML = vs.map((v,j)=>`<i style="display:block;width:${100/n}%;background:${j?"#8051ff":"#c9a08f"}"></i>`).join("");
+  const keys=[["visitors","Visitors",v=>v.visitors.toLocaleString("en-US")],["cr","CR",v=>pct(v.cr)],["rpv","Revenue / visitor",v=>mx(v.rpv,2)],["aov","AOV",v=>mx(v.aov,2)]];
+  const best=k=>Math.max(...vs.map(v=>v[k])), lead=vs.reduce((a,v,j)=>v.rpv>vs[a].rpv?j:a,0), hasData=vs.some(v=>v.visitors>0);
+  $("abGrid").innerHTML = vs.map((v,j)=>`
+    <div class="abcol ${hasData&&j===lead?"lead":""}">
+      <div class="abhead"><b>${esc(v.name)}</b><span class="hint">${esc(v.note)}</span>${hasData&&j===lead?`<span class="chip ab">Leading</span>`:""}</div>
+      <div class="abstats">${keys.map(([k,l,f])=>`<div class="abstat ${hasData&&k!=="visitors"&&v[k]===best(k)?"best":""}"><span>${l}</span><b>${f(v)}</b></div>`).join("")}</div>
+      <div class="abstage"><div class="pb" data-ab="${j}"></div></div>
+      <button class="btn dark block" style="margin-top:14px" data-winner="${abDeal}-${j}">Pick ${esc(v.name)} as winner</button>
+    </div>`).join("");
+  document.querySelectorAll("#abGrid [data-ab]").forEach(el=>{ const j=+el.dataset.ab; mountWidget(el, abSel[j], vs[j].prices); });
+}
+$("abGrid").addEventListener("click",e=>{
+  const w=e.target.closest("[data-winner]");
+  if(w){ const [i,j]=w.dataset.winner.split("-").map(Number); $("abModal").classList.remove("open"); chooseWinner(i,j); return; }
+  const b=e.target.closest("[data-i]"), col=e.target.closest("[data-ab]");
+  if(b&&col){ abSel[+col.dataset.ab]=+b.dataset.i; renderAB(); }
+});
+$("setupAB").onclick=()=>{ if(!deals[0].test){ createTest(0); renderDeals(); toast("A/B test created for Pleena - PDRN Reedle Shot"); } openAB(0); };
+
+/* =====================================================================
+   EDITOR — mismas secciones y nombres que Kaching
+   ===================================================================== */
+const ICON = {
+  tag:'<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h7l7 7-7 7-7-7z"/><circle cx="7" cy="7" r="1.3"/></svg>',
+  gear:'<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="3"/><path d="M10 2v2.5M10 15.5V18M2 10h2.5M15.5 10H18M4.3 4.3l1.8 1.8M13.9 13.9l1.8 1.8M4.3 15.7l1.8-1.8M13.9 6.1l1.8-1.8"/></svg>',
+  brush:'<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 3l-8 8M6 12c-2 0-3 1.5-3 3.5V17h1.5C6.5 17 8 16 8 14z"/></svg>',
+  bar:'<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="7"/><path d="M7 13l6-6M7.5 7.5h.01M12.5 12.5h.01"/></svg>',
+  badge:'<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="8" r="5"/><path d="M7 12l-1 6 4-2 4 2-1-6"/></svg>',
+  volume:'<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h7l7 7-7 7-7-7z"/><path d="M8 12l4-4"/></svg>',
+  clock:'<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 2"/></svg>',
+  scratch:'<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 15l4-4M7 17l8-8M11 17l6-6M3 9l6-6"/></svg>',
+  subs:'<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="14" height="12" rx="2"/><path d="M3 8h14"/></svg>',
+  check:'<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h7l7 7-7 7-7-7z"/><path d="M7 10l2 2 4-4"/></svg>',
+  gift:'<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="8" width="14" height="9" rx="1"/><path d="M2 5h16v3H2zM10 5v12M10 5C8 1 5 3 7 5M10 5c2-4 5-2 3 0"/></svg>',
+  sticky:'<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M3 13h14"/></svg>',
+};
+const TOKENS = {
+  bar:[["{{saved_total}}","Ahorro en dinero"],["{{saved_percentage}}","Ahorro en %"],["{{price_per_item}}","Precio por pieza"],["{{quantity}}","Cantidad"],["{{original_total}}","Precio sin descuento"]],
+  gift:[["{{product}}","Nombre del regalo"],["{{original_total}}","Valor del regalo"]],
+};
+const openAcc = new Set(["products","bar0","gifts"]);
+const chk = (path,label,info) => `<label class="chk"><input type="checkbox" data-p="${path}" data-t="bool" ${getPath(state,path)?"checked":""}> ${label}${info?` <span class="i" title="${esc(info)}">i</span>`:""}</label>`;
+const inp = (path,label,opts={}) => `<div class="field"><label>${label}${opts.tok?`<button class="tok" data-var="${path}" data-tokset="${opts.tok}" title="Insert variable">{ }</button>`:""}</label>${opts.prefix?`<div class="pre"><span>${opts.prefix}</span>`:""}<input ${opts.type?`type="${opts.type}"`:""} data-p="${path}" ${opts.type==="number"?'data-t="num"':""} value="${esc(getPath(state,path))}">${opts.prefix?"</div>":""}</div>`;
+function acc(id, icon, title, body, togKey){
+  const tog = togKey ? `<button class="switch ${state.on[togKey]?"on":""}" data-tog="${togKey}" aria-label="Toggle ${esc(title)}"></button>` : "";
+  return `<div class="acc ${openAcc.has(id)?"open":""}" data-acc="${id}"><header><span class="chev">›</span>${ICON[icon]||""}<span>${title}</span><span class="spacer"></span>${tog}</header><div class="body">${body}</div></div>`;
+}
+const soon = `<div class="soon">Esta función llega en la Fase 2. Ya queda en el mismo lugar que en Kaching.</div>`;
+
+function renderEditor(){
+  const s=state, st=s.settings, barOpts=sel=>s.bars.map((b,i)=>`<option value="${i}" ${i===sel?"selected":""}>Bar #${i+1} — ${esc(b.title)}</option>`).join("");
+
+  const products = `
+    <label class="chk"><input type="radio" name="pv"> All products</label>
+    <label class="chk"><input type="radio" name="pv" checked> Selected products</label>
+    <label class="chk"><input type="radio" name="pv"> Selected collections</label>
+    <div class="row nowrap" style="background:#f7f7f7;border-radius:10px;padding:8px;margin:8px 0">
+      <img src="${s.bars[0].img}" style="width:36px;height:36px;border-radius:6px;object-fit:cover" alt="">
+      <b style="flex:1;font-size:12px">Reedle Shot™ — Menos Caída, Más Crecimiento y Más Densidad</b><button class="btn sm" data-demo="Remove product">🗑</button></div>
+    <button class="btn dark block" data-demo="Opens Shopify product picker">⊕ Select more products</button>`;
+
+  const settings = `
+    ${inp("name","Name (only visible for you)")}
+    ${inp("blockTitle","Block title")}
+    ${inp("discountName","Discount name (shown in cart/checkout)")}
+    <div class="sect"><b>Visibility</b>
+      <div class="field"><label>Markets</label><select data-p="market"><option ${s.market==="Mexico"?"selected":""}>Mexico</option><option ${s.market==="All markets"?"selected":""}>All markets</option></select></div>
+      ${chk("settings.excludeB2b","Exclude B2B customers","No se muestra a clientes B2B")}
+      ${chk("settings.onlyWidget","Apply discount only via bundle widget","El precio del paquete solo aplica si lo eligen en el bloque")}</div>
+    <div class="sect"><b>Active dates</b>
+      <div class="grid2">${inp("settings.startDate","Start date",{type:"date"})}${inp("settings.startTime","Start time (GMT-6)",{type:"time"})}</div>
+      ${chk("settings.hasEnd","Set end date")}
+      ${st.hasEnd?inp("settings.endDate","End date",{type:"date"}):""}</div>
+    <div class="sect"><b>Variants</b>
+      ${chk("settings.diffVariants","Let customers choose different variants for each item","Ej. un color distinto por pieza")}
+      ${chk("settings.hideVariantPicker","Hide theme variant picker")}
+      ${chk("settings.hideUnavailable","Hide unavailable variant options")}
+      ${chk("settings.noSync","Don't update other products when a variant is selected")}
+      <div class="btngrid"><button class="btn" data-demo="Add swatches">🎨 Add swatches</button><button class="btn" data-demo="Set default variants">⚙ Set default variants</button></div></div>
+    <div class="sect"><b>Pricing</b>
+      ${chk("settings.perItem","Show prices per item")}
+      ${chk("settings.compareAt","Use product compare-at price","El precio tachado sale del compare-at del producto ($1,050 por pieza)")}
+      ${chk("settings.noDecimals","Show prices without decimals")}
+      ${chk("settings.rounding","Price rounding")}
+      ${chk("settings.updateThemePrice","Update theme product price")}
+      ${chk("settings.totalInAtc","Show total price in the add to cart button","Se ve en Store preview (demo)")}</div>
+    <div class="sect"><b>Cart</b>${chk("settings.skipCart","Skip cart and go to checkout directly")}</div>
+    <div class="rowline">Low stock alert <button class="switch ${st.lowStock?"on":""}" data-flag="settings.lowStock" aria-label="Low stock alert"></button></div>`;
+
+  const S=s.style, C=S.colors;
+  const layIcons = {
+    vertical:'<svg width="56" height="40"><rect x="4" y="4" width="48" height="9" rx="2" fill="none" stroke="#5c5f62"/><rect x="4" y="16" width="48" height="9" rx="2" fill="none" stroke="#5c5f62"/><rect x="4" y="28" width="48" height="9" rx="2" fill="none" stroke="#5c5f62"/></svg>',
+    horizontal:'<svg width="56" height="40"><rect x="3" y="8" width="15" height="24" rx="2" fill="none" stroke="#5c5f62"/><rect x="21" y="8" width="15" height="24" rx="2" fill="none" stroke="#5c5f62"/><rect x="39" y="8" width="15" height="24" rx="2" fill="none" stroke="#5c5f62"/></svg>',
+    grid:'<svg width="56" height="40"><rect x="4" y="4" width="22" height="14" rx="2" fill="none" stroke="#5c5f62"/><rect x="30" y="4" width="22" height="14" rx="2" fill="none" stroke="#5c5f62"/><rect x="4" y="22" width="22" height="14" rx="2" fill="none" stroke="#5c5f62"/><rect x="30" y="22" width="22" height="14" rx="2" fill="none" stroke="#5c5f62"/></svg>',
+    radio:'<svg width="56" height="40"><circle cx="8" cy="9" r="3" fill="none" stroke="#5c5f62"/><rect x="15" y="7" width="36" height="4" rx="2" fill="#c4c4c4"/><circle cx="8" cy="20" r="3" fill="#5c5f62"/><rect x="15" y="18" width="36" height="4" rx="2" fill="#c4c4c4"/><circle cx="8" cy="31" r="3" fill="none" stroke="#5c5f62"/><rect x="15" y="29" width="36" height="4" rx="2" fill="#c4c4c4"/></svg>',
+  };
+  const sw = (k,l) => `<label>${l}<span class="sw"><input type="color" data-p="style.colors.${k}" value="${C[k]}"><span>⌃⌄</span></span></label>`;
+  const cgrp = (title, items) => `<div class="cg"><b>${title}</b><div class="cgrid">${items.map(([k,l])=>sw(k,l)).join("")}</div></div>`;
+  const fontOpts = k => [["regular","Regular"],["medium","Medium"],["bold","Bold"],["italic","Italic"],["medium-italic","Medium italic"],["bold-italic","Bold italic"]].map(([v,t])=>`<option value="${v}" ${S.fonts[k][1]===v?"selected":""}>${t}</option>`).join("");
+  const fgrp = (k,l) => `<div class="grp"><b>${l}</b><div class="two"><small>Font size</small><small>Font style</small>
+      <div class="range"><span class="px" style="width:100%"><input type="number" min="8" max="40" data-p="style.fonts.${k}.0" data-t="num" value="${S.fonts[k][0]}"><span>px</span></span></div>
+      <select data-p="style.fonts.${k}.1">${fontOpts(k)}</select></div></div>`;
+  const style = `
+    <div class="layouts">${Object.keys(layIcons).map(k=>`<button class="lay ${s.layout===k?"on":""}" data-lay="${k}" title="${k}">${layIcons[k]}</button>`).join("")}</div>
+    <div class="grid2">
+      <div class="field"><label>Corner radius</label><div class="range"><input type="range" min="0" max="24" data-p="style.radius" data-t="num" value="${S.radius}"><span class="px"><input type="number" data-p="style.radius" data-t="num" value="${S.radius}"><span>px</span></span></div></div>
+      <div class="field"><label>Spacing</label><div class="range"><input type="range" min="0" max="24" data-p="style.spacing" data-t="num" value="${S.spacing}"></div></div>
+    </div>
+    <div style="font-weight:600;margin-top:6px">Colors</div>
+    ${cgrp("General",[["cardBg","Cards bg"],["selectedBg","Selected bg"],["border","Border color"],["blockTitle","Block title"]])}
+    ${cgrp("Bar texts",[["title","Title"],["subtitle","Subtitle"],["price","Price"],["fullPrice","Full price"]])}
+    ${cgrp("Label",[["labelBg","Background"],["labelText","Text"]])}
+    ${cgrp("Free gift",[["giftBg","Background"],["giftText","Text"],["giftSelBg","Selected bg"],["giftSelText","Selected text"]])}
+    ${cgrp("Pill swatches",[["pillBg","Background"],["pillText","Text"],["pillBorder","Border color"],["pillSelBg","Selected bg"],["pillSelText","Selected text"],["pillSelBorder","Selected border"]])}
+    ${cgrp("Upsell",[["upsellBg","Background"],["upsellText","Text"],["upsellSelBg","Selected bg"],["upsellSelText","Selected text"]])}
+    <div style="font-weight:600;margin:12px 0 6px">Typography</div>
+    <div class="field"><label>Font</label><select data-p="style.font"><option value="theme" ${S.font==="theme"?"selected":""}>Theme default</option><option value="Inter, sans-serif" ${S.font.startsWith("Inter")?"selected":""}>Inter</option><option value="Georgia, serif" ${S.font.startsWith("Georgia")?"selected":""}>Georgia</option></select></div>
+    <div class="tgrid">${fgrp("blockTitle","Block title")}${fgrp("title","Title")}${fgrp("subtitle","Subtitle")}${fgrp("label","Label")}${fgrp("gift","Free gift")}${fgrp("upsell","Upsell")}</div>`;
+
+  const priceField = (b,i) => b.priceType==="default" ? `<div class="field"><label>Total price</label><div class="pre"><span>MX$</span><input disabled value="${UNIT_PRICE*b.qty}"></div></div>`
+    : b.priceType==="fixed" ? inp(`bars.${i}.value`,"Total price",{type:"number",prefix:"MX$"})
+    : b.priceType==="percent" ? inp(`bars.${i}.value`,"Discount",{type:"number",prefix:"%"})
+    : inp(`bars.${i}.value`,"Amount off",{type:"number",prefix:"MX$"});
+  const bars = s.bars.map((b,i)=>`
+    <div class="barwrap"><span class="handle" title="Drag">⠿</span>
+      <div class="acc ${openAcc.has("bar"+i)?"open":""}" data-acc="bar${i}" style="position:relative">
+        <header><span class="chev">›</span>${ICON.bar}<span>Bar #${i+1} - <span data-bind="bars.${i}.title">${esc(b.title)}</span></span><span class="spacer"></span><button class="kebab" data-barmenu="${i}" aria-label="Bar actions">⋯</button></header>
+        <div class="body">
+          <div class="grid3">
+            ${inp(`bars.${i}.qty`,"Quantity",{type:"number"})}
+            <div class="field"><label>Price</label><select data-p="bars.${i}.priceType" data-rerender>
+              ${[["fixed","Fixed price"],["percent","Percentage off"],["amount","Amount off"],["default","Default"]].map(([v,t])=>`<option value="${v}" ${b.priceType===v?"selected":""}>${t}</option>`).join("")}</select></div>
+            ${priceField(b,i)}
+          </div>
+          <div class="grid2">${inp(`bars.${i}.title`,"Title",{tok:"bar"})}${inp(`bars.${i}.subtitle`,"Subtitle",{tok:"bar"})}</div>
+          <div class="grid2">${inp(`bars.${i}.label`,"Label",{tok:"bar"})}<div></div></div>
+          ${chk(`bars.${i}.qtySelector`,"Show quantity selector")}
+          <label class="chk"><input type="checkbox" data-preselect="${i}" ${s.preselected===i?"checked":""}> Selected by default</label>
+          <div class="btngrid">
+            <button class="btn" data-demo="Edit image">🖼 Edit image</button><button class="btn" data-demo="Featured image">🏷 Featured image</button>
+            <button class="btn" data-demo="Add upsell">➚ Add upsell</button><button class="btn" data-demo="Add gift">🎁 Add gift ▾</button>
+            <button class="btn" data-demo="Add personalisation">✎ Add personalisation</button><button class="btn" data-demo="Add highlights">☰ Add highlights</button>
+          </div>
+          <div class="rowline">Show as Sold out <button class="switch ${b.soldOut?"on":""}" data-flag="bars.${i}.soldOut" aria-label="Show as sold out"></button></div>
+        </div>
+        ${barMenu===i?`<div class="menu" style="right:8px;top:40px"><button data-baract="up">Move up</button><button data-baract="down">Move down</button><button data-baract="dup">Duplicate</button><button data-baract="del" class="danger">Remove</button></div>`:""}
+      </div></div>`).join("") + `<div class="addbox"><button class="btn dark sm" id="addBar">⊕ Add bar</button></div>`;
+
+  const badges = s.badges.map((x,i)=>`
+    <div class="innercard"><div class="top"><b>Badge</b><button class="linkbtn" data-delbadge="${i}">Remove</button></div>
+      <div class="grid2">
+        <div class="field"><label>Style</label><select data-p="badges.${i}.style"><option value="simple" ${x.style==="simple"?"selected":""}>Simple</option><option value="pill" ${x.style==="pill"?"selected":""}>Pill</option></select></div>
+        <div class="field"><label>Attached to</label><select data-p="badges.${i}.bar" data-t="num">${barOpts(x.bar)}</select></div>
+      </div>
+      ${inp(`badges.${i}.text`,"Text",{tok:"bar"})}
+      <div class="field"><label>Text size</label><div class="range"><input type="range" min="9" max="18" data-p="badges.${i}.size" data-t="num" value="${x.size}"><span class="px"><input type="number" data-p="badges.${i}.size" data-t="num" value="${x.size}"><span>px</span></span></div></div>
+      <div class="grid2">
+        <div class="field"><label>Text color</label><span class="sw"><input type="color" data-p="badges.${i}.color" value="${x.color}"><span>⌃⌄</span></span></div>
+        <div class="field"><label>Background color</label><span class="sw"><input type="color" data-p="badges.${i}.bg" value="${x.bg}"><span>⌃⌄</span></span></div>
+      </div></div>`).join("") + `<button class="btn block" id="addBadge">+ Add badge</button>`;
+
+  const unlockOpts = g => s.bars.map((b,j)=>`<option value="${j+1}|0" ${g.unlockAt===j+1&&!g.only?"selected":""}>Bar #${j+1} and higher</option><option value="${j+1}|1" ${g.unlockAt===j+1&&g.only?"selected":""}>Bar #${j+1}</option>`).join("");
+  const gifts = `
+    ${inp("gifts.title","Title")}
+    ${inp("gifts.subtitle","Subtitle")}
+    ${s.gifts.items.map((g,i)=>`
+    <div class="innercard"><div class="top"><b>Gift #${i+1}</b><button class="linkbtn gray" data-giftmove="${i}|-1" aria-label="Move up">↑</button><button class="linkbtn gray" data-giftmove="${i}|1" aria-label="Move down">↓</button><button class="linkbtn" data-delgift="${i}">Remove gift</button></div>
+      <div class="gtabs"><button data-gifttype="${i}|product" class="${g.type==="product"?"on":""}">🎁<span>Free gift</span></button><button data-gifttype="${i}|shipping" class="${g.type==="shipping"?"on":""}">🚚<span>Free shipping</span></button></div>
+      ${g.type==="product"?`<div class="gprod"><img src="${g.img}" alt=""><b>${esc(g.product)}</b><button class="btn sm" data-demo="Reset image">⟲ Reset image</button><button class="btn sm" data-demo="Remove product">🗑</button></div>
+      <div class="field" style="max-width:160px"><label>Select gift quantity</label><input type="number" min="1" data-p="gifts.items.${i}.qty" data-t="num" value="${g.qty}"></div>`
+      :`<div class="gprod"><img src="${g.img}" alt=""><b>Free shipping</b><button class="btn sm" data-demo="Edit image">🖼 Edit image</button></div>`}
+      <div class="field"><label>Unlock at</label><select data-giftunlock="${i}">${unlockOpts(g)}</select></div>
+      <div class="grid2">${inp(`gifts.items.${i}.label`,"Label",{tok:"gift"})}${inp(`gifts.items.${i}.crossed`,"Label crossed out",{tok:"gift"})}</div>
+      <div class="grid2">${inp(`gifts.items.${i}.title`,"Title",{tok:"gift"})}${inp(`gifts.items.${i}.locked`,"Locked title",{tok:"gift"})}</div>
+      ${g.type==="shipping"?chk(`gifts.items.${i}.excludeRates`,"Exclude shipping rates over a certain amount"):""}
+      ${chk(`gifts.items.${i}.subsOnly`,"Apply only for subscriptions")}
+    </div>`).join("")}
+    <button class="btn block" id="addGift">+ Add gift</button>`;
+
+  const timer = `${inp("timer.text","Text")}${inp("timer.minutes","Minutes",{type:"number"})}`;
+
+  $("editorPanel").innerHTML =
+    acc("products","tag","Products",products) +
+    acc("settings","gear","Settings",settings) +
+    acc("style","brush","Style",style) +
+    bars +
+    acc("badges","badge","Badges",badges,"badges") +
+    acc("volume","volume","Volume discount with other products",soon,"volume") +
+    acc("timer","clock","Countdown timer",timer,"timer") +
+    acc("scratch","scratch","Scratch-off",soon,"scratch") +
+    acc("subs","subs","Subscriptions",soon,"subs") +
+    acc("checkbox","check","Checkbox upsells",soon,"checkbox") +
+    acc("gifts","gift","Progressive gifts",gifts,"gifts") +
+    acc("sticky","sticky","Sticky add to cart",soon,"sticky");
+  renderPreview();
+}
+let barMenu=null, tokTarget=null;
+const ep=$("editorPanel");
+function closeTok(){ const m=document.querySelector(".tokmenu"); if(m) m.remove(); tokTarget=null; }
+ep.addEventListener("click",e=>{
+  const q=s=>e.target.closest(s);
+  if(q("[data-tog]")){ e.stopPropagation(); const k=q("[data-tog]").dataset.tog; state.on[k]=!state.on[k]; if(k==="timer") timerLeft=null; q("[data-tog]").classList.toggle("on"); renderPreview(); return; }
+  if(q("[data-flag]")){ e.stopPropagation(); const p=q("[data-flag]").dataset.flag; setPath(state,p,!getPath(state,p)); q("[data-flag]").classList.toggle("on"); renderPreview(); return; }
+  if(q("[data-lay]")){ state.layout=q("[data-lay]").dataset.lay; ep.querySelectorAll("[data-lay]").forEach(b=>b.classList.toggle("on",b===q("[data-lay]"))); renderPreview(); return; }
+  if(q("[data-demo]")){ toast(q("[data-demo]").dataset.demo+" — en la app real abre el selector de Shopify"); return; }
+  if(q("[data-var]")){
+    e.stopPropagation(); closeTok(); const btn=q("[data-var]"); tokTarget=btn.dataset.var;
+    const m=document.createElement("div"); m.className="tokmenu";
+    m.innerHTML=TOKENS[btn.dataset.tokset].map(([t,l])=>`<button data-token="${t}"><span>${l}</span><code>${t}</code></button>`).join("");
+    document.body.appendChild(m); const r=btn.getBoundingClientRect();
+    m.style.left=Math.max(8, Math.min(window.innerWidth-240, r.left+window.scrollX-180))+"px"; m.style.top=(r.bottom+window.scrollY+4)+"px";
+    m.addEventListener("click",ev=>{ const t=ev.target.closest("[data-token]"); if(!t) return;
+      const input=ep.querySelector(`input[data-p="${tokTarget}"]`); input.value=(input.value?input.value+" ":"")+t.dataset.token;
+      input.dispatchEvent(new Event("input",{bubbles:true})); closeTok(); input.focus(); });
+    return;
+  }
+  if(q("[data-barmenu]")){ e.stopPropagation(); const i=+q("[data-barmenu]").dataset.barmenu; barMenu = barMenu===i?null:i; renderEditor(); return; }
+  if(q("[data-baract]")){
+    const a=q("[data-baract]").dataset.baract, i=barMenu, B=state.bars; barMenu=null;
+    if(a==="up"&&i>0) [B[i-1],B[i]]=[B[i],B[i-1]];
+    if(a==="down"&&i<B.length-1) [B[i+1],B[i]]=[B[i],B[i+1]];
+    if(a==="dup") B.splice(i+1,0,{...B[i], title:B[i].title+" (copy)"});
+    if(a==="del"&&B.length>1){ B.splice(i,1); state.badges=state.badges.filter(x=>x.bar!==i).map(x=>({...x,bar:x.bar>i?x.bar-1:x.bar})); }
+    state.preselected=Math.min(state.preselected,B.length-1); previewSel=Math.min(previewSel,B.length-1); storeSel=Math.min(storeSel,B.length-1);
+    renderEditor(); return;
+  }
+  if(e.target.id==="addBar"){ const last=state.bars[state.bars.length-1], n=last.qty+1; state.bars.push({...last, qty:n, priceType:"fixed", value:last.value+350, title:"Compra "+n, label:""}); openAcc.add("bar"+(state.bars.length-1)); renderEditor(); return; }
+  if(e.target.id==="addBadge"){ state.badges.push({bar:0, style:"simple", text:"Nuevo", size:12, color:"#ffffff", bg:state.style.colors.border}); renderEditor(); return; }
+  if(q("[data-delbadge]")){ state.badges.splice(+q("[data-delbadge]").dataset.delbadge,1); renderEditor(); return; }
+  if(e.target.id==="addGift"){ const g=state.gifts.items; g.push({...g[g.length-1], unlockAt:Math.min(state.bars.length,(g[g.length-1]||{unlockAt:0}).unlockAt+1)}); renderEditor(); return; }
+  if(q("[data-delgift]")){ state.gifts.items.splice(+q("[data-delgift]").dataset.delgift,1); renderEditor(); return; }
+  if(q("[data-giftmove]")){ const [i,d]=q("[data-giftmove]").dataset.giftmove.split("|").map(Number), G=state.gifts.items, j=i+d; if(j>=0&&j<G.length) [G[i],G[j]]=[G[j],G[i]]; renderEditor(); return; }
+  if(q("[data-gifttype]")){ const [i,t]=q("[data-gifttype]").dataset.gifttype.split("|"), g=state.gifts.items[+i];
+    if(t!==g.type){ g.type=t; if(t==="shipping"){ g.title="Envío Gratis a Todo México"; g.crossed=""; g.img=CDN+"carrito-envio-pleena-transparente-ezgif.com-jpg-to-webp-converter_300x300.webp?v=1785035130"; } else { g.product=g.product||"Guía digital: 7 Hábitos Anticaída"; g.value=g.value||150; g.title="{{product}}"; g.crossed="{{original_total}}"; g.img=CDN+"portada-7-habitos-caida-cabello-pleena.png?v=1785034501"; } }
+    renderEditor(); return; }
+  const h=q(".acc>header");
+  if(h && !q("button")){ const a=h.parentElement, id=a.dataset.acc; a.classList.toggle("open"); a.classList.contains("open")?openAcc.add(id):openAcc.delete(id); }
+});
+function onField(e){
+  const t=e.target;
+  if(t.dataset.preselect!==undefined){ state.preselected=+t.dataset.preselect; previewSel=storeSel=state.preselected; renderEditor(); return; }
+  if(t.dataset.giftunlock!==undefined){ const [u,o]=t.value.split("|").map(Number), g=state.gifts.items[+t.dataset.giftunlock]; g.unlockAt=u; g.only=!!o; renderPreview(); return; }
+  const p=t.dataset.p; if(!p) return;
+  let v = t.type==="checkbox" ? t.checked : t.dataset.t==="num" ? (+t.value||0) : t.value;
+  setPath(state,p,v);
+  ep.querySelectorAll(`[data-p="${p}"]`).forEach(o=>{ if(o!==t && o.type!=="checkbox") o.value=v; });
+  ep.querySelectorAll(`[data-bind="${p}"]`).forEach(o=>o.textContent=v);
+  if(p==="timer.minutes") timerLeft=null;
+  if(t.hasAttribute("data-rerender") || p==="settings.hasEnd"){ renderEditor(); return; }
+  renderPreview();
+}
+ep.addEventListener("input",e=>{ if(e.target.type!=="checkbox" && e.target.tagName!=="SELECT") onField(e); });
+ep.addEventListener("change",e=>{ if(e.target.type==="checkbox"||e.target.tagName==="SELECT") onField(e); });
+$("publishBtn").onclick=()=>{ const b=$("publishBtn"); b.textContent="✓ Published"; toast("Deal published to your store"); setTimeout(()=>b.textContent="Publish",1600); };
+$("draftBtn").onclick=()=>toast("Saved as draft");
+
+/* brand colors */
+function setBrand(hex){ document.documentElement.style.setProperty("--brand",hex);
+  Object.assign(state.style.colors,{border:hex, labelBg:hex, selectedBg:tint(hex,.16), giftSelBg:tint(hex,.16)}); state.badges.forEach(b=>b.bg=hex); }
+$("brandInput").addEventListener("input",e=>$("brandHex").textContent=e.target.value);
+$("brandApply").onclick=()=>{ setBrand($("brandInput").value); $("brandModal").classList.remove("open"); if(!$("v-editor").classList.contains("hide")) renderEditor(); toast("Brand colors applied to all deals"); };
+
+/* =====================================================================
+   TRANSLATIONS
+   ===================================================================== */
+function renderTranslations(){
+  const rows=[["Block title",state.blockTitle],...state.bars.map((b,i)=>[`Bar #${i+1} title`,b.title]),...state.bars.map((b,i)=>[`Bar #${i+1} label`,b.label]),["Badge",state.badges[0]?state.badges[0].text:""],["Progressive gifts title",state.gifts.title],...state.gifts.items.map((g,i)=>[`Gift #${i+1} locked title`,g.locked])];
+  $("trRows").innerHTML=rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${esc(v)}</td><td><input style="border:1px solid #8a8a8a55;border-radius:8px;padding:6px 8px;width:100%" placeholder="${esc(v)}"></td></tr>`).join("");
+}
+
+/* =====================================================================
+   ANALYTICS (tus números reales de los últimos 30 días)
+   ===================================================================== */
+const metrics=[
+  {k:"rev",l:"Revenue",v:"MX$25,950",d:"1419.2%",up:true},{k:"added",l:"Added revenue",v:"MX$7,441",d:"2299.4%",up:true},
+  {k:"orders",l:"Bundle orders",v:"24",d:"1100%",up:true},{k:"vis",l:"Visitors",v:"2382",d:"550.8%",up:true},
+  {k:"cr",l:"CR",v:"1.3%",d:"160%",up:true},{k:"aov",l:"AOV",v:"MX$837.09",d:"2%",up:false},
+  {k:"rpv",l:"Revenue / visitor",v:"MX$10.89",d:"133.2%",up:true},{k:"atc",l:"ATC",v:"173",d:"1341.7%",up:true},
+  {k:"atcr",l:"ATC rate",v:"7.3%",d:"121.2%",up:true}];
+let activeMetric="rev";
+const days=[]; { const st=new Date(2026,8,13); for(let i=0;i<30;i++){ const d=new Date(st); d.setDate(d.getDate()+i); days.push(d);} }
+const raw=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1900,2000,2100,3000,2900,1600,1500,1900,2400,1300,1800,2000,2600,3700];
+const series=(()=>{ const sum=raw.reduce((a,b)=>a+b,0); return raw.map(v=>v*25950/sum); })();
+const prevSeries=series.map((_,i)=>i<2?850+i*60:0);
+function renderMetrics(){
+  $("mgrid").innerHTML = metrics.map(m=>`<button class="m ${m.k===activeMetric?"on":""}" data-m="${m.k}"><div class="l">${m.l}</div><div class="row nowrap" style="gap:6px;margin-top:4px"><span class="v">${m.v}</span><span class="delta ${m.up?"up":"down"}">${m.up?"↗":"↘"} ${m.d}</span></div></button>`).join("") + `<button class="m add" data-addmetric>⊕ Metrics</button>`;
+  $("chartTitle").textContent = metrics.find(x=>x.k===activeMetric).l;
+  renderChart(activeMetric);
+}
+$("mgrid").addEventListener("click",e=>{ if(e.target.closest("[data-addmetric]")){ toast("Choose which metrics to show"); return; } const c=e.target.closest("[data-m]"); if(c){ activeMetric=c.dataset.m; renderMetrics(); } });
+function renderChart(key){
+  const scale={rev:1,added:7441/25950,orders:24/25950,vis:2382/25950*1.2,rpv:10.89/25950*30,atc:173/25950}[key]||1;
+  let cur=series.map(v=>v*scale), prev=prevSeries.map(v=>v*scale);
+  if(["cr","atcr","aov"].includes(key)){ const base={cr:1.3,atcr:7.3,aov:837}[key]; cur=series.map(v=>v?base*(0.75+0.5*((v%700)/700)):0); prev=prevSeries.map(v=>v?base*.5:0); }
+  const W=900,H=220,pl=60,pb=24,pt=8,max=Math.max(...cur,...prev)*1.1||1;
+  const x=i=>pl+i/(cur.length-1)*(W-pl-10), y=v=>pt+(H-pt-pb)*(1-v/max);
+  const smooth=a=>a.map((v,i)=>{ if(!i) return `M${x(0)},${y(v)}`; const x0=x(i-1),y0=y(a[i-1]),x1=x(i),y1=y(v),cx=(x0+x1)/2; return `C${cx},${y0} ${cx},${y1} ${x1},${y1}`; }).join(" ");
+  const fmt=v=>["cr","atcr"].includes(key)?v.toFixed(1)+"%":["orders","vis","atc"].includes(key)?Math.round(v):"MX$"+Math.round(v).toLocaleString("en-US");
+  const M=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  let svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">`;
+  [0,.25,.5,.75,1].map(t=>max/1.1*t).forEach(t=>{ svg+=`<line x1="${pl}" x2="${W-10}" y1="${y(t)}" y2="${y(t)}" stroke="#eee"/><text x="${pl-8}" y="${y(t)+4}" font-size="10" text-anchor="end" fill="#8a8a8a">${fmt(t)}</text>`; });
+  days.forEach((d,i)=>{ if(i%2===0) svg+=`<text x="${x(i)}" y="${H-6}" font-size="10" text-anchor="middle" fill="#8a8a8a">${d.getDate()} ${M[d.getMonth()]}</text>`; });
+  svg+=`<path d="${smooth(cur)} L${x(cur.length-1)},${y(0)} L${x(0)},${y(0)} Z" fill="#8051ff" opacity=".07"/><path d="${smooth(prev)}" fill="none" stroke="#b9a5ff" stroke-width="2" stroke-dasharray="3 4"/><path d="${smooth(cur)}" fill="none" stroke="#8051ff" stroke-width="2.2"/></svg>`;
+  $("chart").innerHTML=svg;
+}
+function renderATables(){
+  const a=[["Pleena - PDRN Reedle Shot",25950,24,2358,837.09,11],["Pleena - Digestive",0,0,0,0,0],["Bundle #4",0,0,0,0,0],["Collar Relato Eterno",0,0,0,0,0],["Pleena - Growturn mx",0,0,24,0,0,true],["Collar abrazo eterno",0,0,0,0,0],["Collar abrazo eterno (Copy)",0,0,0,0,0]];
+  const dn=`<div class="delta down">↘ 100%</div>`;
+  $("aRows").innerHTML=a.map(r=>`<tr><td>👁 ${r[0]}</td><td class="num">${mx(r[1])}${r[6]?dn:""}</td><td class="num">${r[2]}${r[6]?dn:""}</td><td class="num">${r[3]}${r[6]?'<div class="delta down">↘ 93.4%</div>':""}</td><td class="num">${mx(r[4],2)}${r[6]?dn:""}</td><td class="num">${mx(r[5],2)}${r[6]?dn:""}</td></tr>`).join("");
+  const f=[["› Quantity breaks",24,"100%","MX$21,817","MX$909.03",true],["BXGY",0,"0%","MX$0","MX$0.00"],["Bundle",0,"0%","MX$0","MX$0.00"],["Mix & match",0,"0%","MX$0","MX$0.00"],["Deal box",0,"0%","MX$0","MX$0.00"],["Upsells",0,"0%","MX$0","MX$0.00"],["Checkbox upsells",0,"0%","MX$0","MX$0.00"],["› Gifts",24,"100%","MX$0","MX$909.03",true],["Subscriptions",0,"0%","MX$0","MX$0.00"],["Personalisation",0,"0%","MX$0","MX$0.00"]];
+  $("fRows").innerHTML=f.map(r=>`<tr><td>${r[0]}</td><td class="num">${r[1]}${r[5]?'<div class="delta up">↗ 1100%</div>':""}</td><td class="num">${r[2]}${r[5]?'<div class="delta up">↗ 0%</div>':""}</td><td class="num">${r[3]}${r[5]&&r[3]!=="MX$0"?'<div class="delta up">↗ 1177.2%</div>':""}</td><td class="num">${r[4]}${r[5]?'<div class="delta up">↗ 6.4%</div>':""}</td><td class="num">-</td></tr>`).join("");
+  const fu=[["Visits","2382","100%","550.8%",100,15],["ATC","173","7.3%","1341.7%",7.3,1.2],["Purchase","31","1.3%","1450%",1.3,.3]];
+  $("funnel").innerHTML=fu.map(r=>`<div><div><b>${r[0]}</b> ${r[1]} <span style="color:var(--muted)">${r[2]}</span> <span class="delta up">↗ ${r[3]}</span></div><div class="bars"><div class="b" style="height:${Math.max(3,r[4])}%"></div><div class="b prev" style="height:${Math.max(3,r[5])}%"></div></div></div>`).join("");
+  const parts=[["1 item",22.6,"#9b7bff"],["2 items",0,"#c3b0ff"],["3+ items",77.4,"#ddd2ff"]]; let a0=0;
+  const grad=parts.map(p=>{ const s=a0; a0+=p[1]; return `${p[2]} ${s}% ${a0}%`; }).join(",");
+  $("donut").innerHTML=`<div>${parts.map(p=>`<div class="row nowrap" style="margin:4px 0"><span style="width:10px;height:10px;border-radius:50%;background:${p[2]}"></span>${p[0]} <b>${p[1]}%</b>${p[0]==="3+ items"?' <span class="delta up">↗ 1100%</span>':""}</div>`).join("")}</div>
+    <div style="width:170px;height:170px;border-radius:50%;background:conic-gradient(${grad});display:flex;align-items:center;justify-content:center"><div style="width:112px;height:112px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center"><b style="font-size:22px">31</b><span class="delta up">↗ 1450%</span></div></div>`;
+}
+$("csvBtn").onclick=()=>{ const csv="date,revenue\n"+days.map((d,i)=>`${d.toISOString().slice(0,10)},${series[i].toFixed(2)}`).join("\n");
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download="pleena-bundles-revenue.csv"; a.click(); };
+$("abInsights").onclick=e=>{ e.currentTarget.classList.toggle("on"); toast(e.currentTarget.classList.contains("on")?"A/B test insights on":"A/B test insights off"); };
+
+/* =====================================================================
+   CARRITO DEMO
+   ===================================================================== */
+$("atcBtn").onclick=()=>{
+  const b=state.bars[storeSel], price=barPrice(b);
+  const unlocked=state.on.gifts?state.gifts.items.filter(g=>giftOn(g,b,storeSel)):[];
+  const lines=[{img:b.img,t:`Reedle Shot™ — ${b.qty} pieza${b.qty>1?"s":""}`,s:b.label,p:price,c:fullPrice(b)}];
+  unlocked.filter(g=>g.type==="product").forEach(g=>lines.push({img:g.img,t:g.product,s:"🎁 Regalo",p:0,c:g.value}));
+  $("cartLines").innerHTML=lines.map(l=>`<div class="line"><img src="${l.img}" alt=""><div class="grow"><b>${esc(l.t)}</b><div class="hint">${esc(l.s)}</div></div><div style="text-align:right"><b>${l.p?wm(l.p):"Gratis"}</b><div class="strike">${l.c?wm(l.c):""}</div></div></div>`).join("")
+    + `<div class="line"><div class="grow">🚚 Envío</div><b>${unlocked.some(g=>g.type==="shipping")?"Gratis":"Se calcula al pagar"}</b></div>`;
+  $("cartTotal").textContent=wm(price);
+  $("cartCode").textContent=JSON.stringify({items:[{id:54323870859632,quantity:b.qty,properties:{_pb_deal:"reedle-shot",_pb_bar:String(b.qty)}},...unlocked.filter(g=>g.type==="product").map(g=>({id:g.variant,quantity:g.qty,properties:{_pb_gift:"reedle-shot"}}))]},null,2);
+  $("drawer").classList.add("open");
+};
+$("closeDrawer").onclick=()=>$("drawer").classList.remove("open");
+$("drawer").addEventListener("click",e=>{ if(e.target.id==="drawer") e.currentTarget.classList.remove("open"); });
+
+/* INIT */
+renderKpis(); renderDeals(); renderMetrics(); renderATables();
+</script>
+<script src="onnexa-shopify.js"></script>
+<script src="onnexa-app.js"></script>
+</body>
+</html>
