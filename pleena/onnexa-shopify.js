@@ -50,6 +50,34 @@
     });
   };
 
+  /* ------------------------------------------------- pedidos (métricas) */
+  // Una línea es "de pack" si la marcó el bloque Onnexa (_pb_bar / _pb_deal) o Kaching (__kaching_bundles).
+  // shortcut: hasta 1,000 pedidos; Shopify sin read_all_orders solo deja ver 60 días.
+  ONB.loadOrders = function (days) {
+    var desde = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10), todos = [];
+    var pagina = function (cursor, n) {
+      return q('query($c: String, $q: String) { orders(first: 100, after: $c, query: $q, sortKey: CREATED_AT) { pageInfo { hasNextPage endCursor } nodes { createdAt cancelledAt ' +
+        'currentTotalPriceSet { shopMoney { amount } } lineItems(first: 25) { nodes { quantity discountedTotalSet { shopMoney { amount } } discountAllocations { allocatedAmountSet { shopMoney { amount } } } customAttributes { key value } product { id } } } } } }',
+        { c: cursor, q: 'created_at:>=' + desde }).then(function (d) {
+          d.orders.nodes.forEach(function (o) {
+            if (o.cancelledAt) return;
+            var lineas = o.lineItems.nodes.map(function (l) {
+              var at = {}; (l.customAttributes || []).forEach(function (a) { at[a.key] = a.value; });
+              var kb = at.__kaching_bundles || '';
+              // los descuentos automáticos (Kaching, BXGY) vienen como asignaciones, no en discountedTotal
+              var desc = (l.discountAllocations || []).reduce(function (a, x) { return a + Number(x.allocatedAmountSet.shopMoney.amount); }, 0);
+              return { qty: l.quantity, total: Number(l.discountedTotalSet.shopMoney.amount) - desc, product: l.product && l.product.id,
+                pack: !!(at._pb_bar || at._pb_deal || (kb && kb.indexOf('"gift"') < 0)), gift: !!(at._pb_gift || kb.indexOf('"gift"') >= 0) };
+            });
+            todos.push({ t: new Date(o.createdAt).getTime(), total: Number(o.currentTotalPriceSet.shopMoney.amount), lineas: lineas, pack: lineas.some(function (l) { return l.pack; }) });
+          });
+          if (d.orders.pageInfo.hasNextPage && n < 10) return pagina(d.orders.pageInfo.endCursor, n + 1);
+          return todos;
+        });
+    };
+    return pagina(null, 1);
+  };
+
   /* ------------------------------------------- estado del panel ↔ metafield */
   // state = el objeto del editor (mismo formato que la maqueta aprobada)
   ONB.configFromState = function (state, ctx) {

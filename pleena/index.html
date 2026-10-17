@@ -332,9 +332,16 @@
     .previewcol{position:static}
     .wrap{padding:16px}
   }
+  .side,.topbar{display:none!important} .app{grid-template-columns:1fr!important;height:auto!important} .main{overflow:visible!important}
 </style>
 </head>
 <body>
+<ui-nav-menu>
+  <a href="./" rel="home">Bundle deals</a>
+  <a href="./?v=analytics">Analytics</a>
+  <a href="./?v=translations">Translations</a>
+  <a href="./?v=settings">Settings</a>
+</ui-nav-menu>
 <div class="app">
   <!-- ======== SHOPIFY ADMIN SIDEBAR ======== -->
   <aside class="side">
@@ -355,7 +362,7 @@
       <a class="dim"><span class="ico"></span>Online Store</a>
       <a class="dim"><span class="ico"></span>Facebook &amp; Instagram</a>
       <div class="group">Apps ›</div>
-      <a class="appitem" data-go="deals"><span class="ico"></span>Pleena Bundles</a>
+      <a class="appitem" data-go="deals"><span class="ico"></span>Onnexa Bundles</a>
       <div class="sub" id="subnav">
         <a data-go="translations">Translations</a>
         <a data-go="analytics">Analytics</a>

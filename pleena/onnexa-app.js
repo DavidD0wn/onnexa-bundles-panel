@@ -27,7 +27,7 @@
           name: c.name || x.product.title, prod: corto(x.product.title), created: fecha(x.product.metafield.updatedAt),
           status: x.product.status === 'ACTIVE' ? 'active' : 'inactive',
           // métricas reales: Fase 3 (pedidos marcados con _pb_bar)
-          visitors: 0, cr: 0, rpv: 0, aov: 0, added: 0, total: 0, atcRate: 0, cost: 0, share: bars.map(function () { return 0; }),
+          visitors: null, cr: 0, rpv: 0, aov: 0, added: 0, total: 0, atcRate: 0, cost: 0, share: bars.map(function () { return 0; }),
           prices: bars.map(function (b) { return b.price; }),
           _product: x.product, _config: c
         });
@@ -91,5 +91,67 @@
   };
   document.getElementById('draftBtn').onclick = function () { toast('Los borradores llegan después: por ahora Publish guarda y aplica'); };
 
-  cargarOfertas();
+  /* ------------------------------------------------ métricas reales (pedidos) */
+  var pedidos = [];
+  Object.keys(overview).forEach(function (k) { delete overview[k]; }); // fuera los números de ejemplo de la maqueta
+  var DIAS = { '24h': 1, '7d': 7, '30d': 30, all: 60 };
+  var ETQ = { '24h': '24 hours', '7d': '7 days', '30d': '30 days', all: '60 days (Shopify max)' };
+  function medir(lista) {
+    var packs = lista.filter(function (o) { return o.pack; });
+    var ventas = packs.reduce(function (a, o) { return a + o.lineas.reduce(function (b, l) { return b + (l.pack ? l.total : 0); }, 0); }, 0);
+    var total = lista.reduce(function (a, o) { return a + o.total; }, 0);
+    return [ventas, lista.length ? total / lista.length : 0, lista.length ? packs.length / lista.length * 100 : 0, packs.length];
+  }
+  function calcularResumen() {
+    var ahora = Date.now();
+    Object.keys(DIAS).forEach(function (p) {
+      var ms = DIAS[p] * 864e5, en = function (a, b) { return pedidos.filter(function (o) { return o.t > a && o.t <= b; }); };
+      var cur = medir(en(ahora - ms, ahora)), prev = p === 'all' ? null : medir(en(ahora - 2 * ms, ahora - ms));
+      var pts = [0, 1, 2, 3].map(function () { return []; });
+      for (var i = 0; i < 7; i++) { var m = medir(en(ahora - ms + i * ms / 7, ahora - ms + (i + 1) * ms / 7)); m.forEach(function (v, j) { pts[j].push(v); }); }
+      var fmt = [function (v) { return mx(v); }, function (v) { return mx(v, 2); }, function (v) { return pct(v); }, function (v) { return String(v); }];
+      overview[p] = { label: ETQ[p], pts: pts, k: cur.map(function (v, j) {
+        if (!prev || !prev[j]) return [fmt[j](v), '—', 'up'];
+        var d = (v - prev[j]) / prev[j] * 100;
+        return [fmt[j](v), Math.abs(d).toFixed(2) + '%', d >= 0 ? 'up' : 'down'];
+      }) };
+    });
+  }
+  renderKpis = function () {
+    var t = ['Bundle revenue', 'Average order value', 'Orders with bundles', 'Bundle orders'], o = overview[ovPeriod];
+    document.getElementById('kpis').innerHTML = o ? t.map(function (x, i) {
+      var k = o.k[i];
+      return '<div class="kpi"><div class="t"><i></i>' + x + '</div><div class="row between nowrap"><div><div class="v">' + k[0] + '</div>' +
+        (k[1] === '—' ? '<div class="delta">—</div>' : '<div class="delta ' + k[2] + '">' + (k[2] === 'up' ? '↗' : '↘') + ' ' + k[1] + '</div>') + '</div>' + spark(o.pts[i]) + '</div><div class="d">' + o.label + '</div></div>';
+    }).join('') : '<p style="color:var(--muted)">Cargando pedidos…</p>';
+  };
+  // visitas y conversión necesitan el píxel de la Fase 3: mientras, "—" en vez de ceros falsos
+  COLS.forEach(function (c) {
+    if (['visitors', 'cr', 'rpv', 'atc', 'atcr', 'ppv'].indexOf(c.k) < 0) return;
+    var v = c.v; c.v = function (d) { return d.visitors == null ? '—' : v(d); };
+  });
+  function metricasOfertas() {
+    deals.forEach(function (d) {
+      if (!d._product) return;
+      var suyos = pedidos.filter(function (o) { return o.lineas.some(function (l) { return l.pack && l.product === d._product.id; }); });
+      var lineas = []; suyos.forEach(function (o) { o.lineas.forEach(function (l) { if (l.pack && l.product === d._product.id) lineas.push(l); }); });
+      d.visitors = null;
+      d.total = lineas.reduce(function (a, l) { return a + l.total; }, 0);
+      d.added = d.total;
+      d.aov = suyos.length ? suyos.reduce(function (a, o) { return a + o.total; }, 0) / suyos.length : 0;
+      var bars = (d._config.bars || []).map(function (b) { return b.qty; });
+      d.share = bars.map(function (q) { return lineas.length ? lineas.filter(function (l) { return l.qty === q; }).length / lineas.length : 0; });
+    });
+  }
+  ONB.loadOrders(60).then(function (o) {
+    pedidos = o; calcularResumen(); renderKpis(); metricasOfertas(); renderDeals();
+  }).catch(function (e) { toast('No pude leer los pedidos: ' + e.message); });
+  renderKpis();
+
+  // el menú de Shopify abre ./?v=analytics, etc.
+  var v = new URLSearchParams(location.search).get('v');
+  if (v && document.getElementById('v-' + v)) go(v);
+
+  var cargadas = cargarOfertas();
+  cargadas.then(function () { if (pedidos.length) { metricasOfertas(); renderDeals(); } });
 })();
