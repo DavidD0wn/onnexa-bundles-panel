@@ -40,10 +40,21 @@
 
   var productos = [], tienda = 'tu tienda', abierto = null;
 
+  // Un ebook es un producto que no se envía (digital). Se dejan fuera los servicios y
+  // complementos que tampoco se envían: protección de pedido, add-ons y demás.
+  var NO_EBOOK = /(servicio|service)/i, TAGS_FUERA = /(proteccion|protección|addon|add-on|oculto|seguro)/i;
+  function esEbook(p) {
+    var v = (p.variants && p.variants.nodes && p.variants.nodes[0]) || {};
+    if (!v.inventoryItem || v.inventoryItem.requiresShipping !== false) return false;
+    if (NO_EBOOK.test(p.productType || '')) return false;
+    return !TAGS_FUERA.test((p.tags || []).join(','));
+  }
+
   /* ------------------------------------------------------------- cargar */
   function cargar() {
     var q = 'query($c:String){ shop{ name } products(first:100, after:$c, query:"status:active"){ pageInfo{ hasNextPage endCursor } ' +
-      'nodes{ id title totalVariants featuredMedia{ preview{ image{ url } } } ' +
+      'nodes{ id title productType tags totalVariants featuredMedia{ preview{ image{ url } } } ' +
+      'variants(first:1){ nodes{ inventoryItem{ requiresShipping } } } ' +
       'metafield(namespace:"' + NS + '", key:"' + KEY + '"){ reference{ ... on GenericFile { url } } } } } }';
     productos = [];
     var pagina = function (cursor) {
@@ -53,8 +64,9 @@
           productos.push({
             id: p.id, titulo: p.title, variantes: p.totalVariants,
             foto: (((p.featuredMedia || {}).preview || {}).image || {}).url || '',
-            // "tiene" = está marcado como ebook aunque todavía no le hayan subido el PDF
+            // "tiene" = ya tiene PDF colgado; "digital" = producto sin envío que no es un servicio
             tiene: !!p.metafield,
+            digital: esEbook(p),
             pdf: p.metafield && p.metafield.reference ? p.metafield.reference.url : ''
           });
         });
@@ -62,8 +74,10 @@
       });
     };
     return pagina(null).then(function () {
-      var con = productos.filter(function (p) { return p.tiene; }).length;
-      $('#resumen').innerHTML = '<b>' + con + '</b> ebook' + (con === 1 ? '' : 's') + ' · ' + productos.length + ' productos activos';
+      var libros = productos.filter(function (p) { return p.tiene || p.digital; });
+      var faltan = libros.filter(function (p) { return !p.pdf; }).length;
+      $('#resumen').innerHTML = '<b>' + libros.length + '</b> ebook' + (libros.length === 1 ? '' : 's') +
+        (faltan ? ' · <b style="color:#d72c0d">' + faltan + ' sin PDF</b>' : '');
       pintarLista();
     }).catch(function (e) {
       $('#lista').innerHTML = '<div class="vacio">No pude leer los productos: ' + esc(e.message) + '</div>';
@@ -76,17 +90,19 @@
   function pintarLista() {
     var filtro = ($('#buscar').value || '').toLowerCase();
     var vis = productos.filter(function (p) {
-      if (!eligiendo && !p.tiene) return false;
-      if (eligiendo && p.tiene) return false;
+      var esSuyo = p.tiene || p.digital;      // en la lista: los ebooks (con o sin PDF)
+      if (!eligiendo && !esSuyo) return false; // al agregar: todo lo demás
+      if (eligiendo && esSuyo) return false;
       return !filtro || p.titulo.toLowerCase().indexOf(filtro) >= 0;
     });
+    vis.sort(function (a, b) { return (b.pdf ? 1 : 0) - (a.pdf ? 1 : 0); });
     $('#buscar').placeholder = eligiendo ? 'Buscar el producto al que le vas a poner ebook…' : 'Buscar ebook…';
     $('#elegirCab').style.display = eligiendo ? '' : 'none';
     $('#nuevo').textContent = eligiendo ? 'Cancelar' : '+ Agregar ebook';
     if (!vis.length) {
       $('#lista').innerHTML = '<div class="vacio">' + (eligiendo
-        ? 'Todos los productos ya tienen ebook.'
-        : (filtro ? 'Ningún ebook coincide.' : 'Todavía no hay ebooks. Usa «Agregar ebook» para poner el primero.')) + '</div>';
+        ? 'No queda ningún producto más por agregar.'
+        : (filtro ? 'Ningún ebook coincide.' : 'No encontré productos digitales. Usa «Agregar ebook» para elegir uno a mano.')) + '</div>';
       return;
     }
     $('#lista').innerHTML = vis.map(function (p) {
