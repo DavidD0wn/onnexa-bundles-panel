@@ -83,7 +83,14 @@
     <h1>Ebooks</h1>
     <p class="sub">Los productos con PDF se entregan solos por correo cuando se paga el pedido.</p>
     <div class="caja">
-      <div class="buscar"><input type="search" id="buscar" placeholder="Buscar producto…"></div>
+      <div class="buscar" style="display:flex; gap:10px; align-items:center">
+        <input type="search" id="buscar" placeholder="Buscar ebook…">
+        <span id="resumen" style="font-size:12px; color:var(--gris); white-space:nowrap"></span>
+        <button class="b1" id="nuevo" style="white-space:nowrap">+ Agregar ebook</button>
+      </div>
+      <div id="elegirCab" class="nota" style="display:none; margin:0; border-radius:0; border-left:0; border-right:0; border-top:0">
+        Elige a qué producto le vas a poner un ebook. Después subes el PDF.
+      </div>
       <div class="cab"><span>Imagen</span><span>Nombre</span><span>Archivos</span><span style="text-align:right">Acciones</span></div>
       <div id="lista"><div class="vacio">Cargando productos…</div></div>
     </div>

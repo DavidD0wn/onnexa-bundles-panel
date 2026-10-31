@@ -53,31 +53,50 @@
           productos.push({
             id: p.id, titulo: p.title, variantes: p.totalVariants,
             foto: (((p.featuredMedia || {}).preview || {}).image || {}).url || '',
+            // "tiene" = está marcado como ebook aunque todavía no le hayan subido el PDF
+            tiene: !!p.metafield,
             pdf: p.metafield && p.metafield.reference ? p.metafield.reference.url : ''
           });
         });
         if (d.products.pageInfo.hasNextPage) return pagina(d.products.pageInfo.endCursor);
       });
     };
-    return pagina(null).then(pintarLista).catch(function (e) {
+    return pagina(null).then(function () {
+      var con = productos.filter(function (p) { return p.tiene; }).length;
+      $('#resumen').innerHTML = '<b>' + con + '</b> ebook' + (con === 1 ? '' : 's') + ' · ' + productos.length + ' productos activos';
+      pintarLista();
+    }).catch(function (e) {
       $('#lista').innerHTML = '<div class="vacio">No pude leer los productos: ' + esc(e.message) + '</div>';
     });
   }
 
+  // la lista principal muestra SOLO los ebooks; el resto del catálogo sale al "Agregar ebook"
+  var eligiendo = false;
+
   function pintarLista() {
     var filtro = ($('#buscar').value || '').toLowerCase();
-    var vis = productos.filter(function (p) { return !filtro || p.titulo.toLowerCase().indexOf(filtro) >= 0; });
-    // los que ya tienen ebook, arriba
-    vis.sort(function (a, b) { return (b.pdf ? 1 : 0) - (a.pdf ? 1 : 0); });
-    if (!vis.length) { $('#lista').innerHTML = '<div class="vacio">Ningún producto coincide.</div>'; return; }
+    var vis = productos.filter(function (p) {
+      if (!eligiendo && !p.tiene) return false;
+      if (eligiendo && p.tiene) return false;
+      return !filtro || p.titulo.toLowerCase().indexOf(filtro) >= 0;
+    });
+    $('#buscar').placeholder = eligiendo ? 'Buscar el producto al que le vas a poner ebook…' : 'Buscar ebook…';
+    $('#elegirCab').style.display = eligiendo ? '' : 'none';
+    $('#nuevo').textContent = eligiendo ? 'Cancelar' : '+ Agregar ebook';
+    if (!vis.length) {
+      $('#lista').innerHTML = '<div class="vacio">' + (eligiendo
+        ? 'Todos los productos ya tienen ebook.'
+        : (filtro ? 'Ningún ebook coincide.' : 'Todavía no hay ebooks. Usa «Agregar ebook» para poner el primero.')) + '</div>';
+      return;
+    }
     $('#lista').innerHTML = vis.map(function (p) {
       return '<div class="fila">' +
         '<div class="foto">' + (p.foto ? '<img src="' + esc(p.foto) + '" alt="">' : '') + '</div>' +
         '<div class="nom">' + esc(p.titulo) + '</div>' +
         '<div class="arch' + (p.pdf ? '' : ' cero') + '">' + (p.pdf ? '1' : '0') + '</div>' +
         '<div class="acc">' +
-          '<button class="enlace" data-editar="' + esc(p.id) + '">Editar</button>' +
-          (p.pdf ? '<button class="enlace rojo" data-quitar="' + esc(p.id) + '">Quitar</button>' : '') +
+          '<button class="enlace" data-editar="' + esc(p.id) + '">' + (eligiendo ? 'Elegir' : 'Editar') + '</button>' +
+          (p.pdf && !eligiendo ? '<button class="enlace rojo" data-quitar="' + esc(p.id) + '">Quitar</button>' : '') +
         '</div></div>';
     }).join('');
   }
@@ -85,6 +104,7 @@
   /* ------------------------------------------------------------- editor */
   function abrir(p) {
     abierto = p;
+    eligiendo = false;
     $('#vLista').style.display = 'none';
     $('#vEditor').style.display = '';
     $('#edTitulo').textContent = p.pdf ? 'Editar ebook' : 'Nuevo ebook';
@@ -175,7 +195,7 @@
     if (!p || !f) return;
     $('#zona').innerHTML = 'Subiendo <b>' + esc(f.name) + '</b>…';
     subir(p, f).then(function (url) {
-      p.pdf = url;
+      p.pdf = url; p.tiene = true;
       pintarArchivo();
       $('#zona').innerHTML = 'PDF cargado. Arrastra otro aquí para reemplazarlo o <button class="b2" id="elegir" style="margin-left:4px">Elegir archivo</button>';
       aviso('Listo: "' + p.titulo + '" ya entrega su PDF solo.');
@@ -191,13 +211,14 @@
     var ed = e.target.closest('[data-editar]'), qu = e.target.closest('[data-quitar]');
     if (e.target.id === 'elegir') { $('#archivo').value = ''; $('#archivo').click(); }
     if (e.target.id === 'volver') cerrar();
+    if (e.target.id === 'nuevo') { eligiendo = !eligiendo; $('#buscar').value = ''; pintarLista(); }
     if (ed) { var p = porId(ed.getAttribute('data-editar')); if (p) abrir(p); }
     if (qu) {
       var q = porId(qu.getAttribute('data-quitar'));
       if (!q || !confirm('¿Quitar el ebook de "' + q.titulo + '"? El PDF sigue en Archivos de Shopify.')) return;
       qu.disabled = true;
       quitar(q).then(function () {
-        q.pdf = '';
+        q.pdf = ''; q.tiene = false;
         aviso('Ebook quitado de ' + q.titulo);
         if (abierto && abierto.id === q.id) pintarArchivo(); else pintarLista();
       }).catch(function (err) { aviso(err.message, true); qu.disabled = false; });
