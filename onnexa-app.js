@@ -134,7 +134,15 @@
   // inicio = primer día con datos: la conversión solo se calcula sobre los días que sí tienen visitas medidas.
   function visitas(d, desde, hasta) {
     var s = d._stats; if (!s) return null;
-    var r = { inicio: null, v: 0, e: {}, c: {} }, en = function (dia) { var t = Date.parse(dia + 'T12:00:00'); return t > desde && t <= hasta + 864e5; };
+    var r = { inicio: null, v: 0, e: {}, c: {}, atc: 0 }, en = function (dia) { var t = Date.parse(dia + 'T12:00:00'); return t > desde && t <= hasta + 864e5; };
+    // con historial de Shopify (sesiones que aterrizan en el producto, días completos): visitas y "al carrito" salen de ahí
+    if (s.s && Object.keys(s.s).length) {
+      Object.keys(s.s).forEach(function (dia) { if (!en(dia)) return; r.v += s.s[dia]; r.atc += (s.sc && s.sc[dia]) || 0;
+        var t = Date.parse(dia + 'T00:00:00'); if (r.inicio == null || t < r.inicio) r.inicio = t; });
+      ['e', 'c'].forEach(function (k) { Object.keys(s[k] || {}).forEach(function (dia) { if (en(dia)) Object.keys(s[k][dia]).forEach(function (q) { r[k][q] = (r[k][q] || 0) + s[k][dia][q]; }); }); });
+      if (r.inicio == null) return null;
+      r.inicio = Math.max(r.inicio, desde); return r;
+    }
     var marca = function (dia) { var t = Date.parse(dia + 'T00:00:00'); if (r.inicio == null || t < r.inicio) r.inicio = t; };
     Object.keys(s.v || {}).forEach(function (dia) { if (en(dia)) { r.v += s.v[dia]; marca(dia); } });
     ['e', 'c'].forEach(function (k) { Object.keys(s[k] || {}).forEach(function (dia) { if (!en(dia)) return; marca(dia);
@@ -157,7 +165,7 @@
       d.visitors = med ? vs.v : null;
       d.total = tot(todo.filas, 'totalPedidos'); d.added = tot(todo.filas, 'extra');
       d.aov = todo.pedidos ? d.total / todo.pedidos : 0;
-      if (med) { d.cr = med.pedidos / vs.v * 100; d.rpv = tot(med.filas, 'totalPedidos') / vs.v; d.atcRate = suma(vs.c) / vs.v * 100; }
+      if (med) { d.cr = med.pedidos / vs.v * 100; d.rpv = tot(med.filas, 'totalPedidos') / vs.v; d.atcRate = (vs.atc || suma(vs.c)) / vs.v * 100; }
       var bars = d._config.bars || [];
       d.share = bars.map(function (b) { var f = todo.filas.filter(function (x) { return x.u === b.qty; })[0]; return f && todo.pedidos ? f.pedidos / todo.pedidos : 0; });
       d._barras = bars.map(function (b) {
@@ -202,7 +210,7 @@
     // visitas medidas: conversión = pedidos del paquete / visitas, ambos desde el primer día medido
     var vs = visitas(d, ahora - ms, ahora), med = {};
     if (vs) porPaquete(d, vs.inicio, ahora).filas.forEach(function (f) { med[f.u] = f; });
-    var conv = vs && vs.v ? ' Visitas medidas: <b>' + vs.v.toLocaleString('es-MX') + '</b> desde el ' + fecha(vs.inicio) + ' · conversión total <b>' + pct(suma(Object.keys(med).reduce(function (o, u) { o[u] = med[u].pedidos; return o; }, {})) / vs.v * 100) + '</b>.' : '';
+    var conv = vs && vs.v ? ' Visitas a la página: <b>' + vs.v.toLocaleString('es-MX') + '</b> desde el ' + fecha(vs.inicio) + ' · conversión total <b>' + pct(suma(Object.keys(med).reduce(function (o, u) { o[u] = med[u].pedidos; return o; }, {})) / vs.v * 100) + '</b>.' : '';
     return '<p style="margin:4px 0 10px">El que más se vende: <b>' + mostrar.u(top.u) + '</b> — ' + pct(top.pct) + ' de ' + cur.pedidos + ' pedidos.' + conv + '</p>' +
       '<table class="subtbl"><thead><tr><th>Paquete</th><th class="num">Pedidos</th><th class="num">% de pedidos</th><th class="num">Unidades</th><th class="num">Ingresos</th><th class="num">Ticket promedio</th>' +
       (vs && vs.v ? '<th class="num">Lo eligieron</th><th class="num">Al carrito</th><th class="num">Conversión</th>' : '') +
