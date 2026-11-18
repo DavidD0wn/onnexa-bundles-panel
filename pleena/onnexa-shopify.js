@@ -58,7 +58,7 @@
   ONB.loadOrders = function (days) {
     var desde = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10), todos = [];
     var pagina = function (cursor, n) {
-      return q('query($c: String, $q: String) { orders(first: 100, after: $c, query: $q, sortKey: CREATED_AT) { pageInfo { hasNextPage endCursor } nodes { createdAt cancelledAt ' +
+      return q('query($c: String, $q: String) { orders(first: 100, after: $c, query: $q, sortKey: CREATED_AT) { pageInfo { hasNextPage endCursor } nodes { id name createdAt cancelledAt discountCodes displayFinancialStatus ' +
         'currentTotalPriceSet { shopMoney { amount } } lineItems(first: 25) { nodes { quantity originalTotalSet { shopMoney { amount } } discountAllocations { allocatedAmountSet { shopMoney { amount } } } customAttributes { key value } product { id } } } } } }',
         { c: cursor, q: 'created_at:>=' + desde }).then(function (d) {
           d.orders.nodes.forEach(function (o) {
@@ -72,7 +72,7 @@
               return { qty: l.quantity, total: Number(l.originalTotalSet.shopMoney.amount) - desc, product: l.product && l.product.id,
                 pack: !!(at._pb_bar || at._pb_deal || (kb && kb.indexOf('"gift"') < 0)), gift: !!(at._pb_gift || kb.indexOf('"gift"') >= 0) };
             });
-            todos.push({ t: new Date(o.createdAt).getTime(), total: Number(o.currentTotalPriceSet.shopMoney.amount), lineas: lineas, pack: lineas.some(function (l) { return l.pack; }) });
+            todos.push({ id: o.id, name: o.name, codigos: o.discountCodes || [], pago: o.displayFinancialStatus, t: new Date(o.createdAt).getTime(), total: Number(o.currentTotalPriceSet.shopMoney.amount), lineas: lineas, pack: lineas.some(function (l) { return l.pack; }) });
           });
           if (d.orders.pageInfo.hasNextPage && n < 10) return pagina(d.orders.pageInfo.endCursor, n + 1);
           return todos;

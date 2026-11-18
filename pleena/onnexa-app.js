@@ -221,6 +221,27 @@
           (conPrevio ? '<td class="num">' + (ant[f.u] ? ant[f.u].pedidos : 0) + ' → ' + f.pedidos + ' ' + (ant[f.u] ? mostrar.delta(f.pedidos, ant[f.u].pedidos) : '<span class="delta up">nuevo</span>') + '</td>' : '') + '</tr>';
       }).join('') + '</tbody></table>';
   }
+  // Pedido por pedido: qué paquete llevó cada clienta (mismo criterio que porPaquete), con enlace al pedido en Shopify
+  function listaPedidos(d, desde, hasta) {
+    var filas = [];
+    pedidos.forEach(function (o) {
+      if (o.t <= desde || o.t > hasta) return;
+      var ls = o.lineas.filter(function (l) { return l.product === d._product.id && !l.gift && l.total > 0; });
+      var u = ls.reduce(function (a, l) { return a + l.qty; }, 0); if (!u) return;
+      filas.push({ o: o, u: u, lin: ls.reduce(function (a, l) { return a + l.total; }, 0) });
+    });
+    if (!filas.length) return '';
+    filas.sort(function (a, b) { return b.o.t - a.o.t; });
+    var hora = function (t) { return new Date(t).toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
+    var PAGO = { PAID: 'Pagado', PENDING: 'Pendiente', PARTIALLY_REFUNDED: 'Reembolso parcial', REFUNDED: 'Reembolsado', AUTHORIZED: 'Autorizado', PARTIALLY_PAID: 'Pago parcial', VOIDED: 'Anulado' };
+    return '<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:600">Ver los ' + filas.length + ' pedidos uno por uno</summary>' +
+      '<table class="subtbl" style="margin-top:8px"><thead><tr><th>Pedido</th><th>Fecha</th><th>Paquete</th><th class="num">Ingreso del producto</th><th class="num">Total del pedido</th><th>Código</th><th>Pago</th></tr></thead><tbody>' +
+      filas.map(function (f) {
+        var id = String(f.o.id || '').split('/').pop();
+        return '<tr><td><a href="shopify://admin/orders/' + id + '" target="_top">' + esc(f.o.name) + '</a></td><td style="white-space:nowrap">' + hora(f.o.t) + '</td><td><b>' + f.u + 'U</b></td>' +
+          '<td class="num">' + mx(f.lin, 2) + '</td><td class="num">' + mx(f.o.total, 2) + '</td><td>' + esc((f.o.codigos || []).join(', ') || '—') + '</td><td>' + esc(PAGO[f.o.pago] || f.o.pago || '') + '</td></tr>';
+      }).join('') + '</tbody></table></details>';
+  }
   // Analytics: tarjeta real arriba de las de ejemplo
   var diasPaq = 7;
   var tarjeta = document.createElement('div'); tarjeta.className = 'card'; tarjeta.id = 'paquetes';
@@ -232,7 +253,7 @@
       [7, 14, 30].map(function (n) { return '<button data-d="' + n + '"' + (n === diasPaq ? ' class="on"' : '') + '>' + n + ' días</button>'; }).join('') + '</div></div>' +
       '<p style="color:var(--muted);margin:6px 0 4px">Pedidos reales de Shopify, sin cancelados. El paquete es cuántas unidades del producto llevó la clienta; los regalos a $0, guías y protección no cuentan. Ingresos netos de descuentos.</p>' +
       (!pedidos.length ? '<p style="color:var(--muted)">Cargando pedidos…</p>' : lista.length ? lista.map(function (d) {
-        return '<div style="margin-top:16px"><b>' + esc(d._product.title) + '</b>' + tablaPaquetes(d, diasPaq, true) + '</div>';
+        return '<div style="margin-top:16px"><b>' + esc(d._product.title) + '</b>' + tablaPaquetes(d, diasPaq, true) + listaPedidos(d, ahora - diasPaq * 864e5, ahora) + '</div>';
       }).join('') : '<p style="color:var(--muted)">' + (todas.length ? 'Ninguna oferta tuvo pedidos en los últimos ' + diasPaq + ' días.' : 'Todavía no hay ofertas publicadas.') + '</p>') +
       (pedidos.length && lista.length && sin.length ? '<p style="color:var(--muted);margin-top:14px">Sin pedidos en estos ' + diasPaq + ' días: ' + sin.map(function (d) { return esc(corto(d._product.title)); }).join(' · ') + '</p>' : '');
   }
