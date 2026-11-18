@@ -95,7 +95,14 @@
   var pedidos = [];
   Object.keys(overview).forEach(function (k) { delete overview[k]; }); // fuera los números de ejemplo de la maqueta
   var DIAS = { '24h': 1, '7d': 7, '30d': 30, all: 60 };
-  var ETQ = { '24h': '24 hours', '7d': '7 days', '30d': '30 days', all: '60 days (Shopify max)' };
+  var ETQ = { '24h': 'Today', '7d': '7 days', '30d': '30 days', all: '60 days (Shopify max)' };
+  // Períodos = N días de calendario de la TIENDA (hoy desde las 00:00 de la tienda), iguales para pedidos y visitas:
+  // las visitas de Shopify vienen por día, así que una ventana móvil de 24 h no se puede cruzar con ellas.
+  var OFF = function () { return (ONB.offsetMin != null ? ONB.offsetMin : -300) * 6e4; };
+  function inicioDias(n) { var hoy = Math.floor((Date.now() + OFF()) / 864e5) * 864e5; return hoy - (n - 1) * 864e5 - OFF(); }
+  var diaDe = function (t) { return new Date(t + OFF()).toISOString().slice(0, 10); };
+  var medianoche = function (dia) { return Date.parse(dia + 'T00:00:00Z') - OFF(); };
+  var b24 = document.querySelector('#ovSeg [data-p="24h"]'); if (b24) b24.textContent = 'Today';
   function medir(lista) {
     var packs = lista.filter(function (o) { return o.pack; });
     var ventas = packs.reduce(function (a, o) { return a + o.lineas.reduce(function (b, l) { return b + (l.pack ? l.total : 0); }, 0); }, 0);
@@ -105,10 +112,10 @@
   function calcularResumen() {
     var ahora = Date.now();
     Object.keys(DIAS).forEach(function (p) {
-      var ms = DIAS[p] * 864e5, en = function (a, b) { return pedidos.filter(function (o) { return o.t > a && o.t <= b; }); };
-      var cur = medir(en(ahora - ms, ahora)), prev = p === 'all' ? null : medir(en(ahora - 2 * ms, ahora - ms));
-      var pts = [0, 1, 2, 3].map(function () { return []; });
-      for (var i = 0; i < 7; i++) { var m = medir(en(ahora - ms + i * ms / 7, ahora - ms + (i + 1) * ms / 7)); m.forEach(function (v, j) { pts[j].push(v); }); }
+      var ms = DIAS[p] * 864e5, ini = inicioDias(DIAS[p]), en = function (a, b) { return pedidos.filter(function (o) { return o.t >= a && o.t < b; }); };
+      var cur = medir(en(ini, ahora + 1)), prev = p === 'all' ? null : medir(en(ini - ms, ini));
+      var pts = [0, 1, 2, 3].map(function () { return []; }), paso = (ahora - ini) / 7;
+      for (var i = 0; i < 7; i++) { var m = medir(en(ini + i * paso, ini + (i + 1) * paso)); m.forEach(function (v, j) { pts[j].push(v); }); }
       var fmt = [function (v) { return mx(v); }, function (v) { return mx(v, 2); }, function (v) { return pct(v); }, function (v) { return String(v); }];
       overview[p] = { label: ETQ[p], pts: pts, k: cur.map(function (v, j) {
         if (!prev || !prev[j]) return [fmt[j](v), '—', 'up'];
@@ -138,16 +145,16 @@
   // inicio = primer día con datos: la conversión solo se calcula sobre los días que sí tienen visitas medidas.
   function visitas(d, desde, hasta) {
     var s = d._stats; if (!s) return null;
-    var r = { inicio: null, v: 0, e: {}, c: {}, atc: 0 }, en = function (dia) { var t = Date.parse(dia + 'T12:00:00'); return t > desde && t <= hasta + 864e5; };
+    var r = { inicio: null, v: 0, e: {}, c: {}, atc: 0 }, d0 = diaDe(desde), d1 = diaDe(hasta), en = function (dia) { return dia >= d0 && dia <= d1; };
     // con historial de Shopify (sesiones que aterrizan en el producto, días completos): visitas y "al carrito" salen de ahí
     if (s.s && Object.keys(s.s).length) {
       Object.keys(s.s).forEach(function (dia) { if (!en(dia)) return; r.v += s.s[dia]; r.atc += (s.sc && s.sc[dia]) || 0;
-        var t = Date.parse(dia + 'T00:00:00'); if (r.inicio == null || t < r.inicio) r.inicio = t; });
+        var t = medianoche(dia); if (r.inicio == null || t < r.inicio) r.inicio = t; });
       ['e', 'c'].forEach(function (k) { Object.keys(s[k] || {}).forEach(function (dia) { if (en(dia)) Object.keys(s[k][dia]).forEach(function (q) { r[k][q] = (r[k][q] || 0) + s[k][dia][q]; }); }); });
       if (r.inicio == null) return null;
       r.inicio = Math.max(r.inicio, desde); return r;
     }
-    var marca = function (dia) { var t = Date.parse(dia + 'T00:00:00'); if (r.inicio == null || t < r.inicio) r.inicio = t; };
+    var marca = function (dia) { var t = medianoche(dia); if (r.inicio == null || t < r.inicio) r.inicio = t; };
     Object.keys(s.v || {}).forEach(function (dia) { if (en(dia)) { r.v += s.v[dia]; marca(dia); } });
     ['e', 'c'].forEach(function (k) { Object.keys(s[k] || {}).forEach(function (dia) { if (!en(dia)) return; marca(dia);
       Object.keys(s[k][dia]).forEach(function (q) { r[k][q] = (r[k][q] || 0) + s[k][dia][q]; }); }); });
@@ -164,8 +171,8 @@
     deals.forEach(function (d) {
       if (!d._product) return;
       // mismo período que el Overview (24 h / 7 / 30 días / todo = 60 días de Shopify)
-      var ms = (DIAS[ovPeriod] || 60) * 864e5;
-      var todo = porPaquete(d, ahora - ms, ahora), vs = visitas(d, ahora - ms, ahora);
+      var ini = inicioDias(DIAS[ovPeriod] || 60);
+      var todo = porPaquete(d, ini, ahora), vs = visitas(d, ini, ahora);
       var med = vs && vs.v ? porPaquete(d, vs.inicio, ahora) : null;
       var tot = function (fs, k) { return fs.reduce(function (a, f) { return a + f[k]; }, 0); };
       d.visitors = med ? vs.v : null;
@@ -174,7 +181,8 @@
       if (med) { d.cr = med.pedidos / vs.v * 100; d.rpv = tot(med.filas, 'totalPedidos') / vs.v; d.atcRate = (vs.atc || suma(vs.c)) / vs.v * 100; }
       var bars = d._config.bars || [];
       d.share = bars.map(function (b) { var f = todo.filas.filter(function (x) { return x.u === b.qty; })[0]; return f && todo.pedidos ? f.pedidos / todo.pedidos : 0; });
-      d._barras = bars.map(function (b) {
+      var extras = todo.filas.filter(function (f) { return !bars.some(function (b) { return b.qty === f.u; }); }).map(function (f) { return { qty: f.u, title: f.u + ' piezas (fuera de la oferta)' }; });
+      d._barras = bars.concat(extras).map(function (b) {
         var f = todo.filas.filter(function (x) { return x.u === b.qty; })[0] || { pedidos: 0, totalPedidos: 0, extra: 0 };
         var m = med && med.filas.filter(function (x) { return x.u === b.qty; })[0];
         return { name: b.title || (b.qty === 1 ? '1 pieza' : b.qty + ' piezas'), visitors: d.visitors, cost: d.cost, share: [1],
@@ -191,9 +199,9 @@
     // precio de 1 pieza (la barra de 1): base del "Added revenue"
     var uno = ((d._config && d._config.bars) || []).filter(function (b) { return b.qty === 1; })[0];
     pedidos.forEach(function (o) {
-      if (o.t <= desde || o.t > hasta) return;
+      if (o.t < desde || o.t > hasta) return;
       var ls = o.lineas.filter(function (l) { return l.product === d._product.id && !l.gift && l.total > 0; });
-      var u = ls.reduce(function (a, l) { return a + l.qty; }, 0); if (!u) return;
+      var u = ls.reduce(function (a, l) { return a + l.piezas; }, 0); if (!u) return;
       var g = grupos[u] || (grupos[u] = { u: u, pedidos: 0, unidades: 0, ingresos: 0, totalPedidos: 0, extra: 0 });
       var lin = ls.reduce(function (a, l) { return a + l.total; }, 0);
       g.pedidos++; g.unidades += u; g.ingresos += lin; g.totalPedidos += o.total; n++;
@@ -209,12 +217,12 @@
     var d = (a - b) / b * 100; return '<span class="delta ' + (d >= 0 ? 'up' : 'down') + '">' + (d >= 0 ? '↗ ' : '↘ ') + Math.abs(d).toFixed(0) + '%</span>';
   } };
   function tablaPaquetes(d, dias, conPrevio) {
-    var ahora = Date.now(), ms = dias * 864e5, cur = porPaquete(d, ahora - ms, ahora), prev = porPaquete(d, ahora - 2 * ms, ahora - ms);
+    var ahora = Date.now(), ms = dias * 864e5, ini = inicioDias(dias), cur = porPaquete(d, ini, ahora), prev = porPaquete(d, ini - ms, ini);
     if (!cur.pedidos) return '<p style="color:var(--muted);margin:6px 0">Sin pedidos de este producto en los últimos ' + dias + ' días.</p>';
     var top = cur.filas.slice().sort(function (a, b) { return b.pedidos - a.pedidos; })[0];
     var ant = {}; prev.filas.forEach(function (f) { ant[f.u] = f; });
     // visitas medidas: conversión = pedidos del paquete / visitas, ambos desde el primer día medido
-    var vs = visitas(d, ahora - ms, ahora), med = {};
+    var vs = visitas(d, ini, ahora), med = {};
     if (vs) porPaquete(d, vs.inicio, ahora).filas.forEach(function (f) { med[f.u] = f; });
     var conv = vs && vs.v ? ' Visitas a la página: <b>' + vs.v.toLocaleString('es-MX') + '</b> desde el ' + fecha(vs.inicio) + ' · conversión total <b>' + pct(suma(Object.keys(med).reduce(function (o, u) { o[u] = med[u].pedidos; return o; }, {})) / vs.v * 100) + '</b>.' : '';
     return '<p style="margin:4px 0 10px">El que más se vende: <b>' + mostrar.u(top.u) + '</b> — ' + pct(top.pct) + ' de ' + cur.pedidos + ' pedidos.' + conv + '</p>' +
@@ -231,9 +239,9 @@
   function listaPedidos(d, desde, hasta) {
     var filas = [];
     pedidos.forEach(function (o) {
-      if (o.t <= desde || o.t > hasta) return;
+      if (o.t < desde || o.t > hasta) return;
       var ls = o.lineas.filter(function (l) { return l.product === d._product.id && !l.gift && l.total > 0; });
-      var u = ls.reduce(function (a, l) { return a + l.qty; }, 0); if (!u) return;
+      var u = ls.reduce(function (a, l) { return a + l.piezas; }, 0); if (!u) return;
       filas.push({ o: o, u: u, lin: ls.reduce(function (a, l) { return a + l.total; }, 0) });
     });
     if (!filas.length) return '';
@@ -253,13 +261,13 @@
   var tarjeta = document.createElement('div'); tarjeta.className = 'card'; tarjeta.id = 'paquetes';
   var analytics = document.getElementById('v-analytics'); analytics.insertBefore(tarjeta, analytics.querySelector('.card'));
   function renderPaquetes() {
-    var ahora = Date.now(), con = function (d) { return porPaquete(d, ahora - diasPaq * 864e5, ahora).pedidos > 0; };
+    var ahora = Date.now(), ini = inicioDias(diasPaq), con = function (d) { return porPaquete(d, ini, ahora).pedidos > 0; };
     var todas = deals.filter(function (d) { return d._product; }), lista = todas.filter(con), sin = todas.filter(function (d) { return !con(d); });
     tarjeta.innerHTML = '<div class="row between"><h2>Qué paquete compran tus clientas</h2><div class="seg" id="paqSeg">' +
       [7, 14, 30].map(function (n) { return '<button data-d="' + n + '"' + (n === diasPaq ? ' class="on"' : '') + '>' + n + ' días</button>'; }).join('') + '</div></div>' +
       '<p style="color:var(--muted);margin:6px 0 4px">Pedidos reales de Shopify, sin cancelados. El paquete es cuántas unidades del producto llevó la clienta; los regalos a $0, guías y protección no cuentan. Ingresos netos de descuentos.</p>' +
       (!pedidos.length ? '<p style="color:var(--muted)">Cargando pedidos…</p>' : lista.length ? lista.map(function (d) {
-        return '<div style="margin-top:16px"><b>' + esc(d._product.title) + '</b>' + tablaPaquetes(d, diasPaq, true) + listaPedidos(d, ahora - diasPaq * 864e5, ahora) + '</div>';
+        return '<div style="margin-top:16px"><b>' + esc(d._product.title) + '</b>' + tablaPaquetes(d, diasPaq, true) + listaPedidos(d, ini, ahora) + '</div>';
       }).join('') : '<p style="color:var(--muted)">' + (todas.length ? 'Ninguna oferta tuvo pedidos en los últimos ' + diasPaq + ' días.' : 'Todavía no hay ofertas publicadas.') + '</p>') +
       (pedidos.length && lista.length && sin.length ? '<p style="color:var(--muted);margin-top:14px">Sin pedidos en estos ' + diasPaq + ' días: ' + sin.map(function (d) { return esc(corto(d._product.title)); }).join(' · ') + '</p>' : '');
   }

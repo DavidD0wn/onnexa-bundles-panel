@@ -58,9 +58,10 @@
   ONB.loadOrders = function (days) {
     var desde = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10), todos = [];
     var pagina = function (cursor, n) {
-      return q('query($c: String, $q: String) { orders(first: 100, after: $c, query: $q, sortKey: CREATED_AT) { pageInfo { hasNextPage endCursor } nodes { id name createdAt cancelledAt discountCodes displayFinancialStatus ' +
-        'currentTotalPriceSet { shopMoney { amount } } lineItems(first: 25) { nodes { quantity originalTotalSet { shopMoney { amount } } discountAllocations { allocatedAmountSet { shopMoney { amount } } } customAttributes { key value } product { id } } } } } }',
+      return q('query($c: String, $q: String) { shop { timezoneOffsetMinutes } orders(first: 100, after: $c, query: $q, sortKey: CREATED_AT) { pageInfo { hasNextPage endCursor } nodes { id name createdAt cancelledAt discountCodes displayFinancialStatus ' +
+        'currentTotalPriceSet { shopMoney { amount } } lineItems(first: 25) { nodes { quantity variantTitle originalTotalSet { shopMoney { amount } } discountAllocations { allocatedAmountSet { shopMoney { amount } } } customAttributes { key value } product { id } } } } } }',
         { c: cursor, q: 'created_at:>=' + desde }).then(function (d) {
+          ONB.offsetMin = d.shop.timezoneOffsetMinutes; // los períodos del panel van en días de la tienda
           d.orders.nodes.forEach(function (o) {
             if (o.cancelledAt) return;
             var lineas = o.lineItems.nodes.map(function (l) {
@@ -69,8 +70,10 @@
               // neto = precio original − todas las asignaciones de descuento. No usar discountedTotal: en los packs de Onnexa
               // ya viene con el descuento aplicado y en los de Kaching no, así que restar ahí lo contaba doble (2 piezas a $400).
               var desc = (l.discountAllocations || []).reduce(function (a, x) { return a + Number(x.allocatedAmountSet.shopMoney.amount); }, 0);
-              return { qty: l.quantity, total: Number(l.originalTotalSet.shopMoney.amount) - desc, product: l.product && l.product.id,
-                pack: !!(at._pb_bar || at._pb_deal || (kb && kb.indexOf('"gift"') < 0)), gift: !!(at._pb_gift || kb.indexOf('"gift"') >= 0) };
+              // piezas reales: en el esquema viejo el pack era una variante "2 piezas"/"3 piezas" con cantidad 1
+              var m = String(l.variantTitle || '').match(/(\d+)\s*piezas?/i), piezas = (m ? Number(m[1]) : 1) * l.quantity;
+              return { qty: l.quantity, piezas: piezas, total: Number(l.originalTotalSet.shopMoney.amount) - desc, product: l.product && l.product.id,
+                pack: !!(at._pb_bar || at._pb_deal || (kb && kb.indexOf('"gift"') < 0)) && piezas > 1, gift: !!(at._pb_gift || kb.indexOf('"gift"') >= 0) };
             });
             todos.push({ id: o.id, name: o.name, codigos: o.discountCodes || [], pago: o.displayFinancialStatus, t: new Date(o.createdAt).getTime(), total: Number(o.currentTotalPriceSet.shopMoney.amount), lineas: lineas, pack: lineas.some(function (l) { return l.pack; }) });
           });
