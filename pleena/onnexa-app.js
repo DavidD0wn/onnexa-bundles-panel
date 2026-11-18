@@ -140,7 +140,8 @@
     ['e', 'c'].forEach(function (k) { Object.keys(s[k] || {}).forEach(function (dia) { if (!en(dia)) return; marca(dia);
       Object.keys(s[k][dia]).forEach(function (q) { r[k][q] = (r[k][q] || 0) + s[k][dia][q]; }); }); });
     if (r.inicio == null) return null;
-    r.inicio = Math.max(r.inicio, desde); return r;
+    // el primer día medido empieza a la hora del primer evento, no a medianoche (si no, el CR de ese día se infla)
+    r.inicio = Math.max(r.inicio, desde, s.desde ? Date.parse(s.desde) : 0); return r;
   }
   var suma = function (o) { return Object.keys(o).reduce(function (a, k) { return a + o[k]; }, 0); };
   // Métricas como Kaching, para la oferta y para cada barra (paquete):
