@@ -1,10 +1,10 @@
 /* =============================================================================
    onnexa-shopify.js — lo que la app escribe en Shopify (sin servidor propio).
-   Una oferta = 1 producto con:
-     · variantes pack ("Paquete": 1 pieza / 2 piezas / 3 piezas) con su precio total
-     · metafield onnexa.bundle (json) → lo lee el bloque "Packs" del theme Onnexa
-     · 1 descuento automático "compra X llévate Y" por pack con regalos (Shopify no deja
-       que un mismo artículo active 2 BXGY, por eso uno por pack)
+   Una oferta = 1 producto de UNA variante con:
+     · metafield onnexa.bundle (json) → lo lee el bloque "Packs" del theme Onnexa; cada pack = qty unidades
+     · descuentos automáticos por cantidad que fijan el precio de cada pack (las ventas quedan por unidad)
+     · regalos a $0 (productos ocultos) que el bloque agrega al carrito al desbloquear el pack; no se usa BXGY
+       porque un producto dentro de un BXGY no admite otro descuento de producto fuera de Shopify Plus
    gql(query, variables) lo pone quien carga el archivo: App Bridge en el admin,
    el proxy local en desarrollo, o Node en las pruebas.
    ========================================================================== */
@@ -30,7 +30,7 @@
 
   /* ------------------------------------------------------------ lectura */
   var PRODUCT = 'id title handle status featuredMedia { preview { image { url } } } ' +
-    'options { name values } ' +
+    'options { id name values } ' +
     'variants(first: 100) { nodes { id title price compareAtPrice sku inventoryPolicy selectedOptions { name value } inventoryItem { tracked } } } ' +
     'metafield(namespace: "' + NS + '", key: "' + KEY + '") { value updatedAt }';
 
@@ -57,16 +57,17 @@
     var desde = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10), todos = [];
     var pagina = function (cursor, n) {
       return q('query($c: String, $q: String) { orders(first: 100, after: $c, query: $q, sortKey: CREATED_AT) { pageInfo { hasNextPage endCursor } nodes { createdAt cancelledAt ' +
-        'currentTotalPriceSet { shopMoney { amount } } lineItems(first: 25) { nodes { quantity discountedTotalSet { shopMoney { amount } } discountAllocations { allocatedAmountSet { shopMoney { amount } } } customAttributes { key value } product { id } } } } } }',
+        'currentTotalPriceSet { shopMoney { amount } } lineItems(first: 25) { nodes { quantity originalTotalSet { shopMoney { amount } } discountAllocations { allocatedAmountSet { shopMoney { amount } } } customAttributes { key value } product { id } } } } } }',
         { c: cursor, q: 'created_at:>=' + desde }).then(function (d) {
           d.orders.nodes.forEach(function (o) {
             if (o.cancelledAt) return;
             var lineas = o.lineItems.nodes.map(function (l) {
               var at = {}; (l.customAttributes || []).forEach(function (a) { at[a.key] = a.value; });
               var kb = at.__kaching_bundles || '';
-              // los descuentos automáticos (Kaching, BXGY) vienen como asignaciones, no en discountedTotal
+              // neto = precio original − todas las asignaciones de descuento. No usar discountedTotal: en los packs de Onnexa
+              // ya viene con el descuento aplicado y en los de Kaching no, así que restar ahí lo contaba doble (2 piezas a $400).
               var desc = (l.discountAllocations || []).reduce(function (a, x) { return a + Number(x.allocatedAmountSet.shopMoney.amount); }, 0);
-              return { qty: l.quantity, total: Number(l.discountedTotalSet.shopMoney.amount) - desc, product: l.product && l.product.id,
+              return { qty: l.quantity, total: Number(l.originalTotalSet.shopMoney.amount) - desc, product: l.product && l.product.id,
                 pack: !!(at._pb_bar || at._pb_deal || (kb && kb.indexOf('"gift"') < 0)), gift: !!(at._pb_gift || kb.indexOf('"gift"') >= 0) };
             });
             todos.push({ t: new Date(o.createdAt).getTime(), total: Number(o.currentTotalPriceSet.shopMoney.amount), lineas: lineas, pack: lineas.some(function (l) { return l.pack; }) });
@@ -132,54 +133,27 @@
   };
 
   /* -------------------------------------------------------------- publicar */
-  // log(msg) recibe cada paso, para mostrarlo en el panel
+  // log(msg) recibe cada paso, para mostrarlo en el panel.
+  // El producto conserva UNA variante: cada pack es "qty unidades" de esa variante y el precio del pack
+  // lo hacen descuentos automáticos por cantidad (así las ventas se registran por unidad, como con Kaching).
   ONB.publish = function (productId, state, log) {
     log = log || function () {};
-    var p, cfgOld = {}, packs = {}, unitCompare, unitPrice, base;
+    var p, cfgOld = {}, base, unitPrice, unitCompare;
     return ONB.getProduct(productId).then(function (prod) {
       p = prod;
       try { cfgOld = JSON.parse((p.metafield || {}).value || '{}'); } catch (e) {}
       var opts = p.options.map(function (o) { return o.name; });
-      var simple = p.variants.nodes.length === 1 && opts.length === 1 && opts[0] === 'Title';
-      if (!simple && !(opts.length === 1 && opts[0] === OPT))
-        throw new Error('"' + p.title + '" ya tiene variantes (' + opts.join(', ') + '). Por ahora Onnexa Bundles solo arma packs sobre productos de una sola variante.');
-      // el precio unitario sale de la variante de 1 pieza (o la única)
-      base = p.variants.nodes.filter(function (v) { return simple || v.selectedOptions[0].value === packName(1); })[0] || p.variants.nodes[0];
-      unitPrice = Number(base.price); unitCompare = Number(base.compareAtPrice || base.price);
-      if (simple) {
-        log('Creando la opción "' + OPT + '"…');
-        return q('mutation($id: ID!, $o: [OptionCreateInput!]!) { productOptionsCreate(productId: $id, options: $o, variantStrategy: LEAVE_AS_IS) { userErrors { field message } } }',
-          { id: p.id, o: [{ name: OPT, values: [{ name: packName(1) }] }] }).then(function (d) { errs(d.productOptionsCreate); return ONB.getProduct(p.id); }).then(function (pp) { p = pp; });
-      }
+      if (opts.length === 1 && opts[0] === OPT) return quitarVariantesPack(p, log).then(function (pp) { p = pp; });
+      if (p.variants.nodes.length !== 1)
+        throw new Error('"' + p.title + '" tiene variantes (' + opts.join(', ') + '). Onnexa Bundles arma packs por cantidad sobre productos de una sola variante.');
     }).then(function () {
-      p.variants.nodes.forEach(function (v) { var m = /^(\d+) pieza/.exec(v.selectedOptions[0].value); if (m) packs[Number(m[1])] = v; });
+      base = p.variants.nodes[0];
+      unitPrice = Number(base.price); unitCompare = Number(base.compareAtPrice || base.price);
       var priceOf = function (b) { return b.priceType === 'fixed' ? Number(b.value) : b.priceType === 'percent' ? Math.round(unitPrice * b.qty * (1 - b.value / 100)) : b.priceType === 'amount' ? Math.max(0, unitPrice * b.qty - b.value) : unitPrice * b.qty; };
-      var sku = function (qty) { return (base.sku || p.handle.slice(0, 12).toUpperCase()).replace(/-x\d+$/, '') + '-x' + qty; };
-      var nuevos = [], cambios = [];
-      state.bars.forEach(function (b) {
-        var datos = { price: String(priceOf(b)), compareAtPrice: String(unitCompare * b.qty) };
-        if (packs[b.qty]) cambios.push(Object.assign({ id: packs[b.qty].id, inventoryItem: { sku: sku(b.qty) } }, datos));
-        else nuevos.push(Object.assign({ optionValues: [{ optionName: OPT, name: packName(b.qty) }], inventoryPolicy: base.inventoryPolicy, inventoryItem: { sku: sku(b.qty), tracked: base.inventoryItem.tracked } }, datos));
-      });
-      var paso = Promise.resolve();
-      if (cambios.length) paso = paso.then(function () {
-        log('Actualizando precios de ' + cambios.length + ' pack(s)…');
-        return q('mutation($id: ID!, $v: [ProductVariantsBulkInput!]!) { productVariantsBulkUpdate(productId: $id, variants: $v) { userErrors { field message } } }', { id: p.id, v: cambios }).then(function (d) { errs(d.productVariantsBulkUpdate); });
-      });
-      if (nuevos.length) paso = paso.then(function () {
-        log('Creando ' + nuevos.length + ' variante(s) pack…');
-        return q('mutation($id: ID!, $v: [ProductVariantsBulkInput!]!) { productVariantsBulkCreate(productId: $id, variants: $v) { userErrors { field message } } }', { id: p.id, v: nuevos }).then(function (d) { errs(d.productVariantsBulkCreate); });
-      });
-      return paso.then(function () { return ONB.getProduct(p.id); }).then(function (pp) {
-        p = pp; packs = {};
-        p.variants.nodes.forEach(function (v) { var m = /^(\d+) pieza/.exec(v.selectedOptions[0].value); if (m) packs[Number(m[1])] = v; });
-        return { priceOf: priceOf };
-      });
-    }).then(function (ctx) {
-      return sincronizarDescuentos(p, state, packs, cfgOld.discounts || {}, log).then(function (discounts) {
+      return sincronizarDescuentos(p, state, base, unitPrice, priceOf, cfgOld.discounts || {}, log).then(function (discounts) {
         var cfg = ONB.configFromState(state, {
           dealId: cfgOld.dealId || p.handle, unitCompare: unitCompare, discounts: discounts,
-          priceOf: ctx.priceOf, variantOf: function (qty) { return packs[qty] ? num(packs[qty].id) : null; }
+          priceOf: priceOf, variantOf: function () { return num(base.id); }
         });
         log('Guardando la oferta en el producto…');
         return q('mutation($m: [MetafieldsSetInput!]!) { metafieldsSet(metafields: $m) { userErrors { field message } } }',
@@ -188,32 +162,82 @@
     });
   };
 
-  // un BXGY por pack que tenga regalos de producto; se recrea en cada publicación
-  function sincronizarDescuentos(p, state, packs, viejos, log) {
+  // Migración: productos a los que una versión anterior les creó la opción "Paquete" con variantes 2/3 piezas.
+  // Borra esas variantes, quita la opción (la de 1 pieza vuelve a ser la única, "Default Title") y limpia el SKU "-x1".
+  function quitarVariantesPack(p, log) {
+    var sobran = p.variants.nodes.filter(function (v) { return v.selectedOptions[0].value !== packName(1); }).map(function (v) { return v.id; });
+    var una = p.variants.nodes.filter(function (v) { return v.selectedOptions[0].value === packName(1); })[0];
+    if (!una) throw new Error('"' + p.title + '" no tiene la variante "1 pieza"; revisa las variantes a mano.');
+    var paso = Promise.resolve();
+    if (sobran.length) paso = paso.then(function () {
+      log('Quitando ' + sobran.length + ' variante(s) pack…');
+      return q('mutation($id: ID!, $v: [ID!]!) { productVariantsBulkDelete(productId: $id, variantsIds: $v) { userErrors { field message } } }', { id: p.id, v: sobran }).then(function (d) { errs(d.productVariantsBulkDelete); });
+    });
+    return paso.then(function () {
+      log('Quitando la opción "' + OPT + '"…');
+      return q('mutation($id: ID!, $o: [ID!]!) { productOptionsDelete(productId: $id, options: $o, strategy: DEFAULT) { userErrors { field message } } }', { id: p.id, o: [p.options[0].id] }).then(function (d) { errs(d.productOptionsDelete); });
+    }).then(function () {
+      var sku = (una.sku || '').replace(/-x1$/, '');
+      if (sku === (una.sku || '')) return;
+      return q('mutation($id: ID!, $v: [ProductVariantsBulkInput!]!) { productVariantsBulkUpdate(productId: $id, variants: $v) { userErrors { field message } } }', { id: p.id, v: [{ id: una.id, inventoryItem: { sku: sku } }] }).then(function (d) { errs(d.productVariantsBulkUpdate); });
+    }).then(function () { return ONB.getProduct(p.id); });
+  }
+
+  // Descuentos automáticos de la oferta (se recrean en cada publicación):
+  //  · precio del pack: un descuento por cantidad mínima con el monto total del pack (no por unidad).
+  //  · regalos: ver regalarGratis.
+  function sincronizarDescuentos(p, state, base, unitPrice, priceOf, viejos, log) {
     var nuevos = {}, paso = Promise.resolve();
     var regalos = state.on.gifts ? state.gifts.items.filter(function (g) { return g.type === 'product' && g.variant; }) : [];
-    Object.keys(viejos).forEach(function (qty) {
+    var nombre = (state.name || p.title).slice(0, 60);
+    Object.keys(viejos).forEach(function (k) {
       paso = paso.then(function () {
-        return q('mutation($id: ID!) { discountAutomaticDelete(id: $id) { userErrors { field message } } }', { id: viejos[qty] })
+        return q('mutation($id: ID!) { discountAutomaticDelete(id: $id) { userErrors { field message } } }', { id: viejos[k] })
           .then(function (d) { errs(d.discountAutomaticDelete); }).catch(function () { /* ya no existía */ });
       });
     });
-    state.bars.forEach(function (b) {
-      var suyos = regalos.filter(function (g) { return g.unlockAt <= b.qty; });
-      if (!suyos.length || !packs[b.qty]) return;
-      paso = paso.then(function () {
-        log('Descuento de regalo para ' + packName(b.qty) + '…');
-        var titulo = 'Onnexa · ' + (state.name || p.title).slice(0, 60) + ' · regalo con ' + packName(b.qty);
-        return q('mutation($d: DiscountAutomaticBxgyInput!) { discountAutomaticBxgyCreate(automaticBxgyDiscount: $d) { automaticDiscountNode { id } userErrors { field message } } }', { d: {
-          title: titulo, startsAt: new Date().toISOString(), usesPerOrderLimit: '1',
-          combinesWith: { orderDiscounts: true, productDiscounts: true, shippingDiscounts: true },
-          customerBuys: { value: { quantity: '1' }, items: { products: { productVariantsToAdd: [packs[b.qty].id] } } },
-          customerGets: { value: { discountOnQuantity: { quantity: String(suyos.length), effect: { percentage: 1 } } },
-            items: { products: { productVariantsToAdd: suyos.map(function (g) { return gid('ProductVariant', g.variant); }) } } }
-        } }).then(function (d) { errs(d.discountAutomaticBxgyCreate); nuevos[b.qty] = d.discountAutomaticBxgyCreate.automaticDiscountNode.id; });
-      });
+    state.bars.slice().sort(function (a, b) { return a.qty - b.qty; }).forEach(function (b) {
+      // Shopify aplica UN solo descuento de producto por línea (el mayor), aunque estén marcados como
+      // combinables. El monto va TOTAL, no por unidad: así el pack más grande siempre descuenta más
+      // (2 piezas = $399, 3 = $598) aunque su precio por pieza sea peor, gana el escalón que la clienta
+      // eligió y el título del pedido corresponde a ese pack. Por unidad, Reedle Shot no podía ganar
+      // nunca con 3 ($199.33/pieza contra $199.50 del pack de 2) y las unidades de más se descontaban.
+      var extra = Math.round((unitPrice * b.qty - priceOf(b)) * 100) / 100; // descuento total del pack
+      if (b.qty > 1 && extra > 0) {
+        paso = paso.then(function () {
+          log('Precio del pack de ' + b.qty + ' (−$' + extra + ' en total desde ' + b.qty + ' piezas)…');
+          return q('mutation($d: DiscountAutomaticBasicInput!) { discountAutomaticBasicCreate(automaticBasicDiscount: $d) { automaticDiscountNode { id } userErrors { field message } } }', { d: {
+            title: 'Onnexa · ' + nombre + ' · pack de ' + b.qty, startsAt: new Date().toISOString(),
+            combinesWith: { orderDiscounts: true, productDiscounts: true, shippingDiscounts: true },
+            minimumRequirement: { quantity: { greaterThanOrEqualToQuantity: String(b.qty) } },
+            customerGets: { value: { discountAmount: { amount: extra.toFixed(2), appliesOnEachItem: false } }, items: { products: { productVariantsToAdd: [base.id] } } }
+          } }).then(function (d) { errs(d.discountAutomaticBasicCreate); nuevos['pack' + b.qty] = d.discountAutomaticBasicCreate.automaticDiscountNode.id; });
+        });
+      } else if (b.qty > 1) log('Pack de ' + b.qty + ': sin descuento (no es más barato por unidad que la unidad suelta).');
     });
+    // Regalos: en planes que no son Plus, un producto dentro de un BXGY no puede llevar otro descuento de producto
+    // (help.shopify.com/manual/discounts/discount-combinations), así que no se usa BXGY: el regalo se vende a $0
+    // (precio tachado = su valor) y el bloque de packs solo lo agrega al carrito cuando el pack lo desbloquea.
+    if (regalos.length) paso = paso.then(function () { log('Dejando ' + regalos.length + ' regalo(s) a $0…'); return regalarGratis(regalos); });
     return paso.then(function () { return nuevos; });
+  }
+
+  function regalarGratis(regalos) {
+    var ids = regalos.map(function (g) { return gid('ProductVariant', g.variant); });
+    return q('query($ids: [ID!]!) { nodes(ids: $ids) { ... on ProductVariant { id price compareAtPrice product { id } } } }', { ids: ids }).then(function (d) {
+      var porProducto = {};
+      d.nodes.forEach(function (v, i) {
+        if (!v) throw new Error('No existe la variante del regalo ' + regalos[i].variant);
+        var valor = Number(regalos[i].value || v.compareAtPrice || v.price || 0);
+        if (Number(v.price) === 0 && Number(v.compareAtPrice || 0) === valor) return;
+        (porProducto[v.product.id] = porProducto[v.product.id] || []).push({ id: v.id, price: '0.00', compareAtPrice: valor ? valor.toFixed(2) : null });
+      });
+      return Object.keys(porProducto).reduce(function (p, pid) {
+        return p.then(function () {
+          return q('mutation($id: ID!, $v: [ProductVariantsBulkInput!]!) { productVariantsBulkUpdate(productId: $id, variants: $v) { userErrors { field message } } }', { id: pid, v: porProducto[pid] }).then(function (r) { errs(r.productVariantsBulkUpdate); });
+        });
+      }, Promise.resolve());
+    });
   }
 
   root.ONB = ONB;

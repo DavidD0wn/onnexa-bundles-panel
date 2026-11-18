@@ -143,9 +143,71 @@
       d.share = bars.map(function (q) { return lineas.length ? lineas.filter(function (l) { return l.qty === q; }).length / lineas.length : 0; });
     });
   }
+  /* ------------------------------------- qué paquete compra cada clienta (1U, 2U, 3U…) */
+  // El paquete = unidades del producto de la oferta en el pedido. No depende de que la línea venga marcada como pack
+  // (Kaching, Onnexa o nada): regalos a $0, guías, protección y otros productos no cuentan porque son otro producto.
+  function porPaquete(d, desde, hasta) {
+    var grupos = {}, n = 0;
+    pedidos.forEach(function (o) {
+      if (o.t <= desde || o.t > hasta) return;
+      var ls = o.lineas.filter(function (l) { return l.product === d._product.id && !l.gift && l.total > 0; });
+      var u = ls.reduce(function (a, l) { return a + l.qty; }, 0); if (!u) return;
+      var g = grupos[u] || (grupos[u] = { u: u, pedidos: 0, unidades: 0, ingresos: 0 });
+      g.pedidos++; g.unidades += u; g.ingresos += ls.reduce(function (a, l) { return a + l.total; }, 0); n++;
+    });
+    var filas = Object.keys(grupos).map(Number).sort(function (a, b) { return a - b; }).map(function (u) {
+      var g = grupos[u]; g.pct = g.pedidos / n * 100; g.ticket = g.ingresos / g.pedidos; return g;
+    });
+    return { pedidos: n, filas: filas };
+  }
+  var mostrar = { u: function (u) { return u + (u === 1 ? ' unidad' : ' unidades'); }, delta: function (a, b) {
+    if (!b) return '<span style="color:var(--muted)">—</span>';
+    var d = (a - b) / b * 100; return '<span class="delta ' + (d >= 0 ? 'up' : 'down') + '">' + (d >= 0 ? '↗ ' : '↘ ') + Math.abs(d).toFixed(0) + '%</span>';
+  } };
+  function tablaPaquetes(d, dias, conPrevio) {
+    var ahora = Date.now(), ms = dias * 864e5, cur = porPaquete(d, ahora - ms, ahora), prev = porPaquete(d, ahora - 2 * ms, ahora - ms);
+    if (!cur.pedidos) return '<p style="color:var(--muted);margin:6px 0">Sin pedidos de este producto en los últimos ' + dias + ' días.</p>';
+    var top = cur.filas.slice().sort(function (a, b) { return b.pedidos - a.pedidos; })[0];
+    var ant = {}; prev.filas.forEach(function (f) { ant[f.u] = f; });
+    return '<p style="margin:4px 0 10px">El que más se vende: <b>' + mostrar.u(top.u) + '</b> — ' + pct(top.pct) + ' de ' + cur.pedidos + ' pedidos.</p>' +
+      '<table class="subtbl"><thead><tr><th>Paquete</th><th class="num">Pedidos</th><th class="num">% de pedidos</th><th class="num">Unidades</th><th class="num">Ingresos</th><th class="num">Ticket promedio</th>' +
+      (conPrevio ? '<th class="num">Pedidos vs ' + dias + ' días antes</th>' : '') + '</tr></thead><tbody>' +
+      cur.filas.map(function (f) {
+        return '<tr><td><b>' + f.u + 'U</b> · ' + mostrar.u(f.u) + '</td><td class="num">' + f.pedidos + '</td><td class="num">' + pct(f.pct) + '</td><td class="num">' + f.unidades + '</td><td class="num">' + mx(f.ingresos) + '</td><td class="num">' + mx(f.ticket, 2) + '</td>' +
+          (conPrevio ? '<td class="num">' + (ant[f.u] ? ant[f.u].pedidos : 0) + ' → ' + f.pedidos + ' ' + (ant[f.u] ? mostrar.delta(f.pedidos, ant[f.u].pedidos) : '<span class="delta up">nuevo</span>') + '</td>' : '') + '</tr>';
+      }).join('') + '</tbody></table>';
+  }
+  // Analytics: tarjeta real arriba de las de ejemplo
+  var diasPaq = 7;
+  var tarjeta = document.createElement('div'); tarjeta.className = 'card'; tarjeta.id = 'paquetes';
+  var analytics = document.getElementById('v-analytics'); analytics.insertBefore(tarjeta, analytics.querySelector('.card'));
+  function renderPaquetes() {
+    var ahora = Date.now(), con = function (d) { return porPaquete(d, ahora - diasPaq * 864e5, ahora).pedidos > 0; };
+    var todas = deals.filter(function (d) { return d._product; }), lista = todas.filter(con), sin = todas.filter(function (d) { return !con(d); });
+    tarjeta.innerHTML = '<div class="row between"><h2>Qué paquete compran tus clientas</h2><div class="seg" id="paqSeg">' +
+      [7, 14, 30].map(function (n) { return '<button data-d="' + n + '"' + (n === diasPaq ? ' class="on"' : '') + '>' + n + ' días</button>'; }).join('') + '</div></div>' +
+      '<p style="color:var(--muted);margin:6px 0 4px">Pedidos reales de Shopify, sin cancelados. El paquete es cuántas unidades del producto llevó la clienta; los regalos a $0, guías y protección no cuentan. Ingresos netos de descuentos.</p>' +
+      (!pedidos.length ? '<p style="color:var(--muted)">Cargando pedidos…</p>' : lista.length ? lista.map(function (d) {
+        return '<div style="margin-top:16px"><b>' + esc(d._product.title) + '</b>' + tablaPaquetes(d, diasPaq, true) + '</div>';
+      }).join('') : '<p style="color:var(--muted)">' + (todas.length ? 'Ninguna oferta tuvo pedidos en los últimos ' + diasPaq + ' días.' : 'Todavía no hay ofertas publicadas.') + '</p>') +
+      (pedidos.length && lista.length && sin.length ? '<p style="color:var(--muted);margin-top:14px">Sin pedidos en estos ' + diasPaq + ' días: ' + sin.map(function (d) { return esc(corto(d._product.title)); }).join(' · ') + '</p>' : '');
+  }
+  tarjeta.addEventListener('click', function (e) { var b = e.target.closest('[data-d]'); if (b) { diasPaq = Number(b.getAttribute('data-d')); renderPaquetes(); } });
+  // tabla de ofertas: la flecha de una oferta sin A/B muestra su desglose por paquete (30 días), como en Kaching
+  var renderDealsOrig = renderDeals;
+  renderDeals = function () {
+    renderDealsOrig();
+    document.querySelectorAll('#dealRows .notest').forEach(function (n) {
+      var fila = n.closest('tr').previousElementSibling, d = fila && deals[Number(fila.getAttribute('data-edit'))];
+      if (!d || !d._product || !pedidos.length) return;
+      n.insertAdjacentHTML('beforebegin', '<div style="padding:4px 4px 10px"><b>Últimos 30 días por paquete</b>' + tablaPaquetes(d, 30, false) + '</div>');
+    });
+  };
+
   ONB.loadOrders(60).then(function (o) {
-    pedidos = o; calcularResumen(); renderKpis(); metricasOfertas(); renderDeals();
+    pedidos = o; calcularResumen(); renderKpis(); metricasOfertas(); renderDeals(); renderPaquetes();
   }).catch(function (e) { toast('No pude leer los pedidos: ' + e.message); });
+  renderPaquetes();
   renderKpis();
 
   // el menú de Shopify abre ./?v=analytics, etc.
@@ -153,5 +215,5 @@
   if (v && document.getElementById('v-' + v)) go(v);
 
   var cargadas = cargarOfertas();
-  cargadas.then(function () { if (pedidos.length) { metricasOfertas(); renderDeals(); } });
+  cargadas.then(function () { if (pedidos.length) { metricasOfertas(); renderDeals(); } renderPaquetes(); });
 })();
