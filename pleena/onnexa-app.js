@@ -29,7 +29,8 @@
           // métricas reales: Fase 3 (pedidos marcados con _pb_bar)
           visitors: null, cr: 0, rpv: 0, aov: 0, added: 0, total: 0, atcRate: 0, cost: 0, share: bars.map(function () { return 0; }),
           prices: bars.map(function (b) { return b.price; }),
-          _product: x.product, _config: c, _stats: (function () { try { return JSON.parse(x.product.stats.value); } catch (e) { return null; } })()
+          _product: x.product, _config: c, _stats: (function () { try { return JSON.parse(x.product.stats.value); } catch (e) { return null; } })(),
+          _ab: (function () { try { return JSON.parse(x.product.ab.value) || []; } catch (e) { return []; } })()
         });
       });
       renderDeals(); if (typeof renderKpis === 'function') renderKpis();
@@ -185,7 +186,7 @@
       d._barras = bars.concat(extras).map(function (b) {
         var f = todo.filas.filter(function (x) { return x.u === b.qty; })[0] || { pedidos: 0, totalPedidos: 0, extra: 0 };
         var m = med && med.filas.filter(function (x) { return x.u === b.qty; })[0];
-        return { name: b.title || (b.qty === 1 ? '1 pieza' : b.qty + ' piezas'), visitors: d.visitors, cost: d.cost, share: [1],
+        return { name: nombreBarra(b), visitors: d.visitors, cost: d.cost, share: [1],
           cr: m ? m.pedidos / vs.v * 100 : 0, rpv: m ? m.totalPedidos / vs.v : 0, atcRate: med ? (vs.c[b.qty] || 0) / vs.v * 100 : 0,
           aov: f.pedidos ? f.totalPedidos / f.pedidos : 0, added: f.extra, total: f.totalPedidos };
       });
@@ -194,13 +195,15 @@
   /* ------------------------------------- qué paquete compra cada clienta (1U, 2U, 3U…) */
   // El paquete = unidades del producto de la oferta en el pedido. No depende de que la línea venga marcada como pack
   // (Kaching, Onnexa o nada): regalos a $0, guías, protección y otros productos no cuentan porque son otro producto.
-  function porPaquete(d, desde, hasta) {
+  var nombreBarra = function (b) { return (b.title || (b.qty === 1 ? '1 pieza' : b.qty + ' piezas')) + (b.label ? ' · ' + b.label : ''); };
+  // filtroLinea (opcional): solo las líneas que cumplan, p. ej. las de una variante de una prueba A/B
+  function porPaquete(d, desde, hasta, filtroLinea) {
     var grupos = {}, n = 0;
     // precio de 1 pieza (la barra de 1): base del "Added revenue"
     var uno = ((d._config && d._config.bars) || []).filter(function (b) { return b.qty === 1; })[0];
     pedidos.forEach(function (o) {
       if (o.t < desde || o.t > hasta) return;
-      var ls = o.lineas.filter(function (l) { return l.product === d._product.id && !l.gift && l.total > 0; });
+      var ls = o.lineas.filter(function (l) { return l.product === d._product.id && !l.gift && l.total > 0 && (!filtroLinea || filtroLinea(l)); });
       var u = ls.reduce(function (a, l) { return a + l.piezas; }, 0); if (!u) return;
       var g = grupos[u] || (grupos[u] = { u: u, pedidos: 0, unidades: 0, ingresos: 0, totalPedidos: 0, extra: 0 });
       var lin = ls.reduce(function (a, l) { return a + l.total; }, 0);
@@ -272,10 +275,85 @@
       (pedidos.length && lista.length && sin.length ? '<p style="color:var(--muted);margin-top:14px">Sin pedidos en estos ' + diasPaq + ' días: ' + sin.map(function (d) { return esc(corto(d._product.title)); }).join(' · ') + '</p>' : '');
   }
   tarjeta.addEventListener('click', function (e) { var b = e.target.closest('[data-d]'); if (b) { diasPaq = Number(b.getAttribute('data-d')); renderPaquetes(); } });
+  /* ------------------------------------------------ pruebas A/B (archivo como Kaching) */
+  // Cada oferta guarda sus pruebas en el metafield onnexa.bundle_ab. Los pedidos de una variante traen en la línea
+  // _pb_ab = "<id de la prueba>:<letra>"; las visitas de cada variante vienen en variantes[].visitas.
+  var fechaCorta = function (t) { var d = new Date(t); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ", '" + String(d.getFullYear()).slice(2); };
+  function metricasAB(d, t, letra, cfg) {
+    var ini = Date.parse(t.inicio), fin = t.fin ? Date.parse(t.fin) : Date.now();
+    var tag = t.id + ':', filtro = function (l) { return letra ? l.ab === tag + letra : l.ab.indexOf(tag) === 0; };
+    var p = porPaquete(d, ini, fin, filtro), tot = function (k) { return p.filas.reduce(function (a, f) { return a + f[k]; }, 0); };
+    var vs = (t.variantes || []).filter(function (v) { return !letra || v.letra === letra; });
+    var vis = vs.every(function (v) { return v.visitas != null; }) ? vs.reduce(function (a, v) { return a + v.visitas; }, 0) : null;
+    var total = tot('totalPedidos'), r = { visitors: vis, cost: d.cost, share: [1], atcRate: 0, total: total, added: tot('extra'), aov: p.pedidos ? total / p.pedidos : 0,
+      cr: vis ? p.pedidos / vis * 100 : 0, rpv: vis ? total / vis : 0 };
+    var bars = ((cfg || d._config).bars) || [];
+    r._barras = bars.map(function (b) {
+      var f = p.filas.filter(function (x) { return x.u === b.qty; })[0] || { pedidos: 0, totalPedidos: 0, extra: 0 };
+      return { name: nombreBarra(b), visitors: vis, cost: d.cost, share: [1], atcRate: 0, cr: vis ? f.pedidos / vis * 100 : 0, rpv: vis ? f.totalPedidos / vis : 0,
+        aov: f.pedidos ? f.totalPedidos / f.pedidos : 0, added: f.extra, total: f.totalPedidos };
+    });
+    return r;
+  }
+  var LUPA = '<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M13 13l4.5 4.5"/></svg>';
+  function renderArchivoAB() {
+    var cols = TABLE_ORDER.map(function (k) { return COLS.filter(function (c) { return c.k === k; })[0]; }).filter(function (c) { return c && c.on; });
+    var span = cols.length + 5, celdas = function (m) { return cols.map(function (c) { return '<td class="num">' + c.v(m) + '</td>'; }).join(''); };
+    var barras = function (m) { return m._barras.map(function (b) { return '<tr class="subv"><td class="cb"></td><td></td><td style="padding-left:44px;white-space:nowrap">' + esc(b.name) + '</td><td></td>' +
+      cols.map(function (c) { return '<td class="num">' + (c.k === 'visitors' ? '' : c.v(b)) + '</td>'; }).join('') + '<td></td></tr>'; }).join(''); };
+    $('dealHead').innerHTML = '<tr><th class="cb"></th><th style="width:24px"></th><th>Name</th><th>Period/Date</th>' + cols.map(function (c) { return '<th class="num"><u>' + c.l + '</u></th>'; }).join('') + '<th>Actions</th></tr>';
+    var pruebas = []; deals.forEach(function (d, i) { (d._ab || []).forEach(function (t, k) { pruebas.push({ d: d, t: t, key: 'ab' + i + '_' + k }); }); });
+    pruebas.sort(function (a, b) { return Date.parse(b.t.inicio) - Date.parse(a.t.inicio); });
+    $('dealRows').innerHTML = pruebas.length ? pruebas.map(function (x) {
+      var t = x.t, ini = Date.parse(t.inicio), fin = t.fin ? Date.parse(t.fin) : Date.now(), dias = Math.max(1, Math.round((fin - ini) / 864e5));
+      var abierta = openRows.has(x.key), m = metricasAB(x.d, t, null);
+      var h = '<tr><td class="cb"></td><td><button class="chevbtn ' + (abierta ? 'open' : '') + '" data-expand="' + x.key + '" aria-label="Ver variantes">›</button></td>' +
+        '<td style="white-space:nowrap"><b>' + esc(t.nombre || x.d.name) + '</b>' + (t.fin ? '' : '<span class="chip">En curso</span>') + '</td>' +
+        '<td style="white-space:nowrap">' + dias + (dias === 1 ? ' day' : ' days') + ' (' + fechaCorta(ini) + '-' + fechaCorta(fin) + ')</td>' + celdas(m) + '<td></td></tr>';
+      if (abierta) (t.variantes || []).forEach(function (v, j) {
+        var kv = x.key + '_' + j, vab = openRows.has(kv), mv = metricasAB(x.d, t, v.letra, v.config);
+        h += '<tr class="subv"><td class="cb"></td><td></td><td><div class="row nowrap" style="gap:6px"><button class="chevbtn ' + (vab ? 'open' : '') + '" data-expand="' + kv + '" aria-label="Ver paquetes">›</button>' +
+          '<span style="white-space:nowrap">' + esc(v.nombre || (v.letra + ' variant')) + '</span><button class="eye" data-abprev="' + x.key + '|' + j + '" title="Ver cómo se ve este bundle">' + LUPA + '</button>' +
+          (t.ganador === v.letra ? '<span class="chip" style="background:#cdfee1;color:#0c5132">Winner</span>' : '') + '</div>' +
+          (v.nota ? '<span class="sub" style="display:block;margin-left:30px">' + esc(v.nota) + '</span>' : '') + '</td><td></td>' + celdas(mv) + '<td></td></tr>';
+        if (vab) h += barras(mv);
+      });
+      return h;
+    }).join('') : '<tr><td colspan="' + span + '" style="text-align:center;color:var(--muted);padding:28px">Todavía no hay pruebas A/B. Cuando hagas una, aquí verás cada variante con sus números, la ganadora y la lupa para ver cómo se ve su bundle.</td></tr>';
+    $('bulkbar').classList.add('hide');
+    return pruebas;
+  }
+  // lupa: vista previa del bundle de esa variante (el mismo dibujo del editor, con la configuración de la variante)
+  var pop = document.createElement('div');
+  pop.style.cssText = 'position:fixed;z-index:60;display:none;width:min(430px,92vw);max-height:80vh;overflow:auto;background:#fff;border-radius:14px;box-shadow:0 18px 50px -12px rgba(0,0,0,.35);padding:14px 16px';
+  document.body.appendChild(pop);
+  function verVariante(btn) {
+    var p = btn.getAttribute('data-abprev').split('|'), j = Number(p[1]), m = p[0].match(/^ab(\d+)_(\d+)$/);
+    var d = deals[Number(m[1])], t = d._ab[Number(m[2])], v = t.variantes[j], cfg = v.config || d._config;
+    pop.innerHTML = '<div class="row between" style="margin-bottom:10px"><b>Preview · ' + esc(v.nombre || v.letra) + '</b><button class="btn sm" data-cerrar>Close</button></div><div class="pb" id="abPrevW"></div>';
+    var guarda = JSON.parse(JSON.stringify(state)), up = UNIT_PRICE, uc = UNIT_COMPARE, v1 = d._product.variants.nodes[0];
+    try {
+      UNIT_PRICE = Number(v1.price); UNIT_COMPARE = Number(v1.compareAtPrice || v1.price);
+      Object.keys(state).forEach(function (k) { delete state[k]; }); Object.assign(state, JSON.parse(JSON.stringify(plantilla)));
+      ONB.applyConfig(state, cfg); mountWidget(document.getElementById('abPrevW'), state.preselected);
+    } finally { Object.keys(state).forEach(function (k) { delete state[k]; }); Object.assign(state, guarda); UNIT_PRICE = up; UNIT_COMPARE = uc; }
+    var r = btn.getBoundingClientRect();
+    pop.style.display = 'block';
+    pop.style.left = Math.max(8, Math.min(r.left, innerWidth - pop.offsetWidth - 8)) + 'px';
+    pop.style.top = Math.max(8, Math.min(r.bottom + 6, innerHeight - pop.offsetHeight - 8)) + 'px';
+  }
+  document.getElementById('dealRows').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-abprev]'); if (!b) return;
+    e.stopImmediatePropagation(); e.preventDefault(); verVariante(b);
+  }, true);
+  document.addEventListener('click', function (e) { if (pop.style.display === 'block' && (e.target.closest('[data-cerrar]') || (!pop.contains(e.target) && !e.target.closest('[data-abprev]')))) pop.style.display = 'none'; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') pop.style.display = 'none'; });
+
   // tabla de ofertas: la flecha de una oferta sin A/B muestra una fila por barra en las mismas columnas, como Kaching
   var renderDealsOrig = renderDeals;
   renderDeals = function () {
     renderDealsOrig();
+    if (dealFilter === 'archived') { renderArchivoAB(); return; }
     var cols = TABLE_ORDER.map(function (k) { return COLS.filter(function (c) { return c.k === k; })[0]; }).filter(function (c) { return c && c.on; });
     document.querySelectorAll('#dealRows .notest').forEach(function (n) {
       var tr = n.closest('tr'), fila = tr.previousElementSibling, d = fila && deals[Number(fila.getAttribute('data-edit'))];

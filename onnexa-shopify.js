@@ -34,7 +34,9 @@
     'variants(first: 100) { nodes { id title price compareAtPrice sku inventoryPolicy selectedOptions { name value } inventoryItem { tracked } } } ' +
     'metafield(namespace: "' + NS + '", key: "' + KEY + '") { value updatedAt } ' +
     // visitas/elecciones/carrito por día y paquete: lo escribe cada hora el dashboard de Onnexa
-    'stats: metafield(namespace: "' + NS + '", key: "bundle_stats") { value }';
+    'stats: metafield(namespace: "' + NS + '", key: "bundle_stats") { value } ' +
+    // pruebas A/B de la oferta: [{ id, nombre, inicio, fin, ganador, variantes: [{ letra, nombre, nota, config, visitas }] }]
+    'ab: metafield(namespace: "' + NS + '", key: "bundle_ab") { value }';
 
   // shortcut: lee hasta 250 productos sin paginar; las tiendas tienen ~20, paginar si pasan de 250
   ONB.listDeals = function () {
@@ -72,7 +74,7 @@
               var desc = (l.discountAllocations || []).reduce(function (a, x) { return a + Number(x.allocatedAmountSet.shopMoney.amount); }, 0);
               // piezas reales: en el esquema viejo el pack era una variante "2 piezas"/"3 piezas" con cantidad 1
               var m = String(l.variantTitle || '').match(/(\d+)\s*piezas?/i), piezas = (m ? Number(m[1]) : 1) * l.quantity;
-              return { qty: l.quantity, piezas: piezas, total: Number(l.originalTotalSet.shopMoney.amount) - desc, product: l.product && l.product.id,
+              return { qty: l.quantity, piezas: piezas, ab: at._pb_ab || '', total: Number(l.originalTotalSet.shopMoney.amount) - desc, product: l.product && l.product.id,
                 pack: !!(at._pb_bar || at._pb_deal || (kb && kb.indexOf('"gift"') < 0)) && piezas > 1, gift: !!(at._pb_gift || kb.indexOf('"gift"') >= 0) };
             });
             todos.push({ id: o.id, name: o.name, codigos: o.discountCodes || [], pago: o.displayFinancialStatus, t: new Date(o.createdAt).getTime(), total: Number(o.currentTotalPriceSet.shopMoney.amount), lineas: lineas, pack: lineas.some(function (l) { return l.pack; }) });
