@@ -125,6 +125,10 @@
         (k[1] === '—' ? '<div class="delta">—</div>' : '<div class="delta ' + k[2] + '">' + (k[2] === 'up' ? '↗' : '↘') + ' ' + k[1] + '</div>') + '</div>' + spark(o.pts[i]) + '</div><div class="d">' + o.label + '</div></div>';
     }).join('') : '<p style="color:var(--muted)">Cargando pedidos…</p>';
   };
+  // al cambiar 24 h / 7 / 30 días / todo, la tabla de ofertas también se recalcula (la maqueta solo redibujaba los KPIs)
+  document.getElementById('ovSeg').addEventListener('click', function (e) {
+    if (e.target.closest('[data-p]') && pedidos.length) { metricasOfertas(); renderDeals(); }
+  });
   // visitas y conversión necesitan el píxel de la Fase 3: mientras, "—" en vez de ceros falsos
   COLS.forEach(function (c) {
     if (['visitors', 'cr', 'rpv', 'atc', 'atcr', 'ppv'].indexOf(c.k) < 0) return;
@@ -159,7 +163,9 @@
     var ahora = Date.now();
     deals.forEach(function (d) {
       if (!d._product) return;
-      var todo = porPaquete(d, ahora - 60 * 864e5, ahora), vs = visitas(d, ahora - 60 * 864e5, ahora);
+      // mismo período que el Overview (24 h / 7 / 30 días / todo = 60 días de Shopify)
+      var ms = (DIAS[ovPeriod] || 60) * 864e5;
+      var todo = porPaquete(d, ahora - ms, ahora), vs = visitas(d, ahora - ms, ahora);
       var med = vs && vs.v ? porPaquete(d, vs.inicio, ahora) : null;
       var tot = function (fs, k) { return fs.reduce(function (a, f) { return a + f[k]; }, 0); };
       d.visitors = med ? vs.v : null;
