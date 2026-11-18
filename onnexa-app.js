@@ -29,7 +29,7 @@
           // métricas reales: Fase 3 (pedidos marcados con _pb_bar)
           visitors: null, cr: 0, rpv: 0, aov: 0, added: 0, total: 0, atcRate: 0, cost: 0, share: bars.map(function () { return 0; }),
           prices: bars.map(function (b) { return b.price; }),
-          _product: x.product, _config: c
+          _product: x.product, _config: c, _stats: (function () { try { return JSON.parse(x.product.stats.value); } catch (e) { return null; } })()
         });
       });
       renderDeals(); if (typeof renderKpis === 'function') renderKpis();
@@ -130,17 +130,42 @@
     if (['visitors', 'cr', 'rpv', 'atc', 'atcr', 'ppv'].indexOf(c.k) < 0) return;
     var v = c.v; c.v = function (d) { return d.visitors == null ? '—' : v(d); };
   });
+  // Visitas, elecciones y "al carrito" por paquete entre desde y hasta (ms), del metafield onnexa.bundle_stats.
+  // inicio = primer día con datos: la conversión solo se calcula sobre los días que sí tienen visitas medidas.
+  function visitas(d, desde, hasta) {
+    var s = d._stats; if (!s) return null;
+    var r = { inicio: null, v: 0, e: {}, c: {} }, en = function (dia) { var t = Date.parse(dia + 'T12:00:00'); return t > desde && t <= hasta + 864e5; };
+    var marca = function (dia) { var t = Date.parse(dia + 'T00:00:00'); if (r.inicio == null || t < r.inicio) r.inicio = t; };
+    Object.keys(s.v || {}).forEach(function (dia) { if (en(dia)) { r.v += s.v[dia]; marca(dia); } });
+    ['e', 'c'].forEach(function (k) { Object.keys(s[k] || {}).forEach(function (dia) { if (!en(dia)) return; marca(dia);
+      Object.keys(s[k][dia]).forEach(function (q) { r[k][q] = (r[k][q] || 0) + s[k][dia][q]; }); }); });
+    if (r.inicio == null) return null;
+    r.inicio = Math.max(r.inicio, desde); return r;
+  }
+  var suma = function (o) { return Object.keys(o).reduce(function (a, k) { return a + o[k]; }, 0); };
+  // Métricas como Kaching, para la oferta y para cada barra (paquete):
+  //   Total revenue = total de los pedidos · AOV = total / pedidos · Added revenue = lo que el paquete suma sobre
+  //   comprar 1 pieza (0 en la de 1) · CR y Revenue per visitor = sobre las visitas medidas, con los pedidos de esos días.
   function metricasOfertas() {
+    var ahora = Date.now();
     deals.forEach(function (d) {
       if (!d._product) return;
-      var suyos = pedidos.filter(function (o) { return o.lineas.some(function (l) { return l.pack && l.product === d._product.id; }); });
-      var lineas = []; suyos.forEach(function (o) { o.lineas.forEach(function (l) { if (l.pack && l.product === d._product.id) lineas.push(l); }); });
-      d.visitors = null;
-      d.total = lineas.reduce(function (a, l) { return a + l.total; }, 0);
-      d.added = d.total;
-      d.aov = suyos.length ? suyos.reduce(function (a, o) { return a + o.total; }, 0) / suyos.length : 0;
-      var bars = (d._config.bars || []).map(function (b) { return b.qty; });
-      d.share = bars.map(function (q) { return lineas.length ? lineas.filter(function (l) { return l.qty === q; }).length / lineas.length : 0; });
+      var todo = porPaquete(d, ahora - 60 * 864e5, ahora), vs = visitas(d, ahora - 60 * 864e5, ahora);
+      var med = vs && vs.v ? porPaquete(d, vs.inicio, ahora) : null;
+      var tot = function (fs, k) { return fs.reduce(function (a, f) { return a + f[k]; }, 0); };
+      d.visitors = med ? vs.v : null;
+      d.total = tot(todo.filas, 'totalPedidos'); d.added = tot(todo.filas, 'extra');
+      d.aov = todo.pedidos ? d.total / todo.pedidos : 0;
+      if (med) { d.cr = med.pedidos / vs.v * 100; d.rpv = tot(med.filas, 'totalPedidos') / vs.v; d.atcRate = suma(vs.c) / vs.v * 100; }
+      var bars = d._config.bars || [];
+      d.share = bars.map(function (b) { var f = todo.filas.filter(function (x) { return x.u === b.qty; })[0]; return f && todo.pedidos ? f.pedidos / todo.pedidos : 0; });
+      d._barras = bars.map(function (b) {
+        var f = todo.filas.filter(function (x) { return x.u === b.qty; })[0] || { pedidos: 0, totalPedidos: 0, extra: 0 };
+        var m = med && med.filas.filter(function (x) { return x.u === b.qty; })[0];
+        return { name: b.title || (b.qty === 1 ? '1 pieza' : b.qty + ' piezas'), visitors: d.visitors, cost: d.cost, share: [1],
+          cr: m ? m.pedidos / vs.v * 100 : 0, rpv: m ? m.totalPedidos / vs.v : 0, atcRate: med ? (vs.c[b.qty] || 0) / vs.v * 100 : 0,
+          aov: f.pedidos ? f.totalPedidos / f.pedidos : 0, added: f.extra, total: f.totalPedidos };
+      });
     });
   }
   /* ------------------------------------- qué paquete compra cada clienta (1U, 2U, 3U…) */
@@ -148,12 +173,16 @@
   // (Kaching, Onnexa o nada): regalos a $0, guías, protección y otros productos no cuentan porque son otro producto.
   function porPaquete(d, desde, hasta) {
     var grupos = {}, n = 0;
+    // precio de 1 pieza (la barra de 1): base del "Added revenue"
+    var uno = ((d._config && d._config.bars) || []).filter(function (b) { return b.qty === 1; })[0];
     pedidos.forEach(function (o) {
       if (o.t <= desde || o.t > hasta) return;
       var ls = o.lineas.filter(function (l) { return l.product === d._product.id && !l.gift && l.total > 0; });
       var u = ls.reduce(function (a, l) { return a + l.qty; }, 0); if (!u) return;
-      var g = grupos[u] || (grupos[u] = { u: u, pedidos: 0, unidades: 0, ingresos: 0 });
-      g.pedidos++; g.unidades += u; g.ingresos += ls.reduce(function (a, l) { return a + l.total; }, 0); n++;
+      var g = grupos[u] || (grupos[u] = { u: u, pedidos: 0, unidades: 0, ingresos: 0, totalPedidos: 0, extra: 0 });
+      var lin = ls.reduce(function (a, l) { return a + l.total; }, 0);
+      g.pedidos++; g.unidades += u; g.ingresos += lin; g.totalPedidos += o.total; n++;
+      if (u > 1 && uno) g.extra += Math.max(0, lin - Number(uno.price));
     });
     var filas = Object.keys(grupos).map(Number).sort(function (a, b) { return a - b; }).map(function (u) {
       var g = grupos[u]; g.pct = g.pedidos / n * 100; g.ticket = g.ingresos / g.pedidos; return g;
@@ -169,11 +198,17 @@
     if (!cur.pedidos) return '<p style="color:var(--muted);margin:6px 0">Sin pedidos de este producto en los últimos ' + dias + ' días.</p>';
     var top = cur.filas.slice().sort(function (a, b) { return b.pedidos - a.pedidos; })[0];
     var ant = {}; prev.filas.forEach(function (f) { ant[f.u] = f; });
-    return '<p style="margin:4px 0 10px">El que más se vende: <b>' + mostrar.u(top.u) + '</b> — ' + pct(top.pct) + ' de ' + cur.pedidos + ' pedidos.</p>' +
+    // visitas medidas: conversión = pedidos del paquete / visitas, ambos desde el primer día medido
+    var vs = visitas(d, ahora - ms, ahora), med = {};
+    if (vs) porPaquete(d, vs.inicio, ahora).filas.forEach(function (f) { med[f.u] = f; });
+    var conv = vs && vs.v ? ' Visitas medidas: <b>' + vs.v.toLocaleString('es-MX') + '</b> desde el ' + fecha(vs.inicio) + ' · conversión total <b>' + pct(suma(Object.keys(med).reduce(function (o, u) { o[u] = med[u].pedidos; return o; }, {})) / vs.v * 100) + '</b>.' : '';
+    return '<p style="margin:4px 0 10px">El que más se vende: <b>' + mostrar.u(top.u) + '</b> — ' + pct(top.pct) + ' de ' + cur.pedidos + ' pedidos.' + conv + '</p>' +
       '<table class="subtbl"><thead><tr><th>Paquete</th><th class="num">Pedidos</th><th class="num">% de pedidos</th><th class="num">Unidades</th><th class="num">Ingresos</th><th class="num">Ticket promedio</th>' +
+      (vs && vs.v ? '<th class="num">Lo eligieron</th><th class="num">Al carrito</th><th class="num">Conversión</th>' : '') +
       (conPrevio ? '<th class="num">Pedidos vs ' + dias + ' días antes</th>' : '') + '</tr></thead><tbody>' +
       cur.filas.map(function (f) {
         return '<tr><td><b>' + f.u + 'U</b> · ' + mostrar.u(f.u) + '</td><td class="num">' + f.pedidos + '</td><td class="num">' + pct(f.pct) + '</td><td class="num">' + f.unidades + '</td><td class="num">' + mx(f.ingresos) + '</td><td class="num">' + mx(f.ticket, 2) + '</td>' +
+          (vs && vs.v ? '<td class="num">' + (vs.e[f.u] || 0) + '</td><td class="num">' + (vs.c[f.u] || 0) + '</td><td class="num">' + pct((med[f.u] ? med[f.u].pedidos : 0) / vs.v * 100) + '</td>' : '') +
           (conPrevio ? '<td class="num">' + (ant[f.u] ? ant[f.u].pedidos : 0) + ' → ' + f.pedidos + ' ' + (ant[f.u] ? mostrar.delta(f.pedidos, ant[f.u].pedidos) : '<span class="delta up">nuevo</span>') + '</td>' : '') + '</tr>';
       }).join('') + '</tbody></table>';
   }
@@ -193,14 +228,18 @@
       (pedidos.length && lista.length && sin.length ? '<p style="color:var(--muted);margin-top:14px">Sin pedidos en estos ' + diasPaq + ' días: ' + sin.map(function (d) { return esc(corto(d._product.title)); }).join(' · ') + '</p>' : '');
   }
   tarjeta.addEventListener('click', function (e) { var b = e.target.closest('[data-d]'); if (b) { diasPaq = Number(b.getAttribute('data-d')); renderPaquetes(); } });
-  // tabla de ofertas: la flecha de una oferta sin A/B muestra su desglose por paquete (30 días), como en Kaching
+  // tabla de ofertas: la flecha de una oferta sin A/B muestra una fila por barra en las mismas columnas, como Kaching
   var renderDealsOrig = renderDeals;
   renderDeals = function () {
     renderDealsOrig();
+    var cols = TABLE_ORDER.map(function (k) { return COLS.filter(function (c) { return c.k === k; })[0]; }).filter(function (c) { return c && c.on; });
     document.querySelectorAll('#dealRows .notest').forEach(function (n) {
-      var fila = n.closest('tr').previousElementSibling, d = fila && deals[Number(fila.getAttribute('data-edit'))];
-      if (!d || !d._product || !pedidos.length) return;
-      n.insertAdjacentHTML('beforebegin', '<div style="padding:4px 4px 10px"><b>Últimos 30 días por paquete</b>' + tablaPaquetes(d, 30, false) + '</div>');
+      var tr = n.closest('tr'), fila = tr.previousElementSibling, d = fila && deals[Number(fila.getAttribute('data-edit'))];
+      if (!d || !d._barras) return;
+      tr.outerHTML = d._barras.map(function (b) {
+        return '<tr class="subv"><td class="cb"></td><td></td><td><b>' + esc(b.name) + '</b></td><td></td>' +
+          cols.map(function (c) { return '<td class="num">' + (c.k === 'visitors' ? '' : c.v(b)) + '</td>'; }).join('') + '<td></td></tr>';
+      }).join('');
     });
   };
 

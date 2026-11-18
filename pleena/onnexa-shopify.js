@@ -32,7 +32,9 @@
   var PRODUCT = 'id title handle status featuredMedia { preview { image { url } } } ' +
     'options { id name values } ' +
     'variants(first: 100) { nodes { id title price compareAtPrice sku inventoryPolicy selectedOptions { name value } inventoryItem { tracked } } } ' +
-    'metafield(namespace: "' + NS + '", key: "' + KEY + '") { value updatedAt }';
+    'metafield(namespace: "' + NS + '", key: "' + KEY + '") { value updatedAt } ' +
+    // visitas/elecciones/carrito por día y paquete: lo escribe cada hora el dashboard de Onnexa
+    'stats: metafield(namespace: "' + NS + '", key: "bundle_stats") { value }';
 
   // shortcut: lee hasta 250 productos sin paginar; las tiendas tienen ~20, paginar si pasan de 250
   ONB.listDeals = function () {
