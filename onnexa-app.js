@@ -278,16 +278,36 @@
   /* ------------------------------------------------ pruebas A/B (archivo como Kaching) */
   // Cada oferta guarda sus pruebas en el metafield onnexa.bundle_ab. Los pedidos de una variante traen en la línea
   // _pb_ab = "<id de la prueba>:<letra>"; las visitas de cada variante vienen en variantes[].visitas.
+  // Oferta + cambios de la variante B (lo mismo que hace pl-bundle.js en la tienda): solo presentación, nunca precios.
+  var CAMPOS_B = ['title', 'subtitle', 'label', 'image', 'badge'];
+  function mezclarCfg(base, cambios) {
+    var c = JSON.parse(JSON.stringify(base || {}));
+    if (!cambios) return c;
+    ['title', 'preselected', 'style'].forEach(function (k) { if (cambios[k] != null) c[k] = cambios[k]; });
+    (cambios.bars || []).forEach(function (b, i) { var a = (c.bars || [])[i]; if (a) CAMPOS_B.forEach(function (k) { if (k in b) a[k] = b[k]; }); });
+    return c;
+  }
+  // dibuja el bundle de una configuración (el mismo dibujo del editor), sin tocar lo que esté abierto en el editor
+  function dibujar(el, d, cfg) {
+    var guarda = JSON.parse(JSON.stringify(state)), up = UNIT_PRICE, uc = UNIT_COMPARE, v1 = d._product.variants.nodes[0];
+    try {
+      UNIT_PRICE = Number(v1.price); UNIT_COMPARE = Number(v1.compareAtPrice || v1.price);
+      Object.keys(state).forEach(function (k) { delete state[k]; }); Object.assign(state, JSON.parse(JSON.stringify(plantilla)));
+      ONB.applyConfig(state, cfg); mountWidget(el, state.preselected);
+    } finally { Object.keys(state).forEach(function (k) { delete state[k]; }); Object.assign(state, guarda); UNIT_PRICE = up; UNIT_COMPARE = uc; }
+  }
   var fechaCorta = function (t) { var d = new Date(t); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ", '" + String(d.getFullYear()).slice(2); };
   function metricasAB(d, t, letra, cfg) {
     var ini = Date.parse(t.inicio), fin = t.fin ? Date.parse(t.fin) : Date.now();
     var tag = t.id + ':', filtro = function (l) { return letra ? l.ab === tag + letra : l.ab.indexOf(tag) === 0; };
     var p = porPaquete(d, ini, fin, filtro), tot = function (k) { return p.filas.reduce(function (a, f) { return a + f[k]; }, 0); };
-    var vs = (t.variantes || []).filter(function (v) { return !letra || v.letra === letra; });
-    var vis = vs.every(function (v) { return v.visitas != null; }) ? vs.reduce(function (a, v) { return a + v.visitas; }, 0) : null;
+    // visitantes únicos por variante: los cuenta el dashboard (bundle_stats.ab); si no hay, los de la prueba guardada
+    var vs = (t.variantes || []).filter(function (v) { return !letra || v.letra === letra; }), cuenta = (d._stats && d._stats.ab) || {};
+    var visDe = function (v) { var n = cuenta[t.id + ':' + v.letra]; return n != null ? n : v.visitas; };
+    var vis = vs.some(function (v) { return visDe(v) != null; }) ? vs.reduce(function (a, v) { return a + (visDe(v) || 0); }, 0) : null;
     var total = tot('totalPedidos'), r = { visitors: vis, cost: d.cost, share: [1], atcRate: 0, total: total, added: tot('extra'), aov: p.pedidos ? total / p.pedidos : 0,
       cr: vis ? p.pedidos / vis * 100 : 0, rpv: vis ? total / vis : 0 };
-    var bars = ((cfg || d._config).bars) || [];
+    var bars = mezclarCfg(d._config, cfg).bars || [];
     r._barras = bars.map(function (b) {
       var f = p.filas.filter(function (x) { return x.u === b.qty; })[0] || { pedidos: 0, totalPedidos: 0, extra: 0 };
       return { name: nombreBarra(b), visitors: vis, cost: d.cost, share: [1], atcRate: 0, cr: vis ? f.pedidos / vis * 100 : 0, rpv: vis ? f.totalPedidos / vis : 0,
@@ -309,13 +329,15 @@
       var abierta = openRows.has(x.key), m = metricasAB(x.d, t, null);
       var h = '<tr><td class="cb"></td><td><button class="chevbtn ' + (abierta ? 'open' : '') + '" data-expand="' + x.key + '" aria-label="Ver variantes">›</button></td>' +
         '<td style="white-space:nowrap"><b>' + esc(t.nombre || x.d.name) + '</b>' + (t.fin ? '' : '<span class="chip">En curso</span>') + '</td>' +
-        '<td style="white-space:nowrap">' + dias + (dias === 1 ? ' day' : ' days') + ' (' + fechaCorta(ini) + '-' + fechaCorta(fin) + ')</td>' + celdas(m) + '<td></td></tr>';
+        '<td style="white-space:nowrap">' + dias + (dias === 1 ? ' day' : ' days') + ' (' + fechaCorta(ini) + '-' + fechaCorta(fin) + ')</td>' + celdas(m) +
+        '<td>' + (t.fin && !enCurso(x.d) ? '<button class="btn sm" data-reiniciar="' + x.key + '" style="white-space:nowrap">⟲ Start over</button>' : '') + '</td></tr>';
       if (abierta) (t.variantes || []).forEach(function (v, j) {
         var kv = x.key + '_' + j, vab = openRows.has(kv), mv = metricasAB(x.d, t, v.letra, v.config);
         h += '<tr class="subv"><td class="cb"></td><td></td><td><div class="row nowrap" style="gap:6px"><button class="chevbtn ' + (vab ? 'open' : '') + '" data-expand="' + kv + '" aria-label="Ver paquetes">›</button>' +
           '<span style="white-space:nowrap">' + esc(v.nombre || (v.letra + ' variant')) + '</span><button class="eye" data-abprev="' + x.key + '|' + j + '" title="Ver cómo se ve este bundle">' + LUPA + '</button>' +
           (t.ganador === v.letra ? '<span class="chip" style="background:#cdfee1;color:#0c5132">Winner</span>' : '') + '</div>' +
-          (v.nota ? '<span class="sub" style="display:block;margin-left:30px">' + esc(v.nota) + '</span>' : '') + '</td><td></td>' + celdas(mv) + '<td></td></tr>';
+          (v.nota ? '<span class="sub" style="display:block;margin-left:30px">' + esc(v.nota) + '</span>' : '') + '</td><td></td>' + celdas(mv) +
+          '<td>' + (t.fin ? '' : '<button class="btn sm" data-ganadora="' + x.key + '|' + j + '" style="white-space:nowrap">Pick winner</button>') + '</td></tr>';
         if (vab) h += barras(mv);
       });
       return h;
@@ -329,23 +351,101 @@
   document.body.appendChild(pop);
   function verVariante(btn) {
     var p = btn.getAttribute('data-abprev').split('|'), j = Number(p[1]), m = p[0].match(/^ab(\d+)_(\d+)$/);
-    var d = deals[Number(m[1])], t = d._ab[Number(m[2])], v = t.variantes[j], cfg = v.config || d._config;
+    var d = deals[Number(m[1])], t = d._ab[Number(m[2])], v = t.variantes[j];
     pop.innerHTML = '<div class="row between" style="margin-bottom:10px"><b>Preview · ' + esc(v.nombre || v.letra) + '</b><button class="btn sm" data-cerrar>Close</button></div><div class="pb" id="abPrevW"></div>';
-    var guarda = JSON.parse(JSON.stringify(state)), up = UNIT_PRICE, uc = UNIT_COMPARE, v1 = d._product.variants.nodes[0];
-    try {
-      UNIT_PRICE = Number(v1.price); UNIT_COMPARE = Number(v1.compareAtPrice || v1.price);
-      Object.keys(state).forEach(function (k) { delete state[k]; }); Object.assign(state, JSON.parse(JSON.stringify(plantilla)));
-      ONB.applyConfig(state, cfg); mountWidget(document.getElementById('abPrevW'), state.preselected);
-    } finally { Object.keys(state).forEach(function (k) { delete state[k]; }); Object.assign(state, guarda); UNIT_PRICE = up; UNIT_COMPARE = uc; }
+    dibujar(document.getElementById('abPrevW'), d, mezclarCfg(d._config, v.config));
     var r = btn.getBoundingClientRect();
     pop.style.display = 'block';
     pop.style.left = Math.max(8, Math.min(r.left, innerWidth - pop.offsetWidth - 8)) + 'px';
     pop.style.top = Math.max(8, Math.min(r.bottom + 6, innerHeight - pop.offsetHeight - 8)) + 'px';
   }
+  var enCurso = function (d) { return (d._ab || []).filter(function (t) { return !t.fin; })[0]; };
+  var deClave = function (k) { var m = k.match(/^ab(\d+)_(\d+)$/), d = deals[Number(m[1])]; return { d: d, t: d._ab[Number(m[2])] }; };
+  function guardarPruebas(d, pruebas, aviso) {
+    return ONB.guardarAB(d._product.id, pruebas).then(function () { d._ab = pruebas; toast(aviso); renderDeals(); })
+      .catch(function (e) { toast('No se pudo guardar la prueba: ' + e.message); });
+  }
+  // terminar la prueba con una ganadora; si gana B, su presentación pasa a ser la oferta
+  function elegirGanadora(clave) {
+    var p = clave.split('|'), x = deClave(p[0]), v = x.t.variantes[Number(p[1])];
+    if (!window.confirm('¿Terminar la prueba con "' + (v.nombre || v.letra) + '" como ganadora?' + (v.config ? '\n\nSus títulos, etiquetas y badges pasan a la oferta para todas las clientas.' : ''))) return;
+    var pruebas = x.d._ab.map(function (t) { return t === x.t ? Object.assign({}, t, { fin: new Date().toISOString(), ganador: v.letra }) : t; });
+    var paso = v.config ? ONB.guardarConfig(x.d._product.id, mezclarCfg(x.d._config, v.config)).then(function () { x.d._config = mezclarCfg(x.d._config, v.config); }) : Promise.resolve();
+    paso.then(function () { return guardarPruebas(x.d, pruebas, (v.nombre || v.letra) + ' ganó: la prueba quedó en el archivo'); })
+      .catch(function (e) { toast('No se pudo aplicar la ganadora: ' + e.message); });
+  }
+  // volver a correr una prueba terminada con las mismas variantes
+  function reiniciar(clave) {
+    var x = deClave(clave);
+    if (enCurso(x.d)) { toast('Esta oferta ya tiene una prueba en curso'); return; }
+    var nueva = { id: 't' + Date.now().toString(36), nombre: x.t.nombre, inicio: new Date().toISOString(), split: x.t.split || 50,
+      variantes: x.t.variantes.map(function (v) { return { letra: v.letra, nombre: v.nombre, nota: v.nota, config: v.config }; }) };
+    guardarPruebas(x.d, x.d._ab.concat(nueva), 'Prueba reiniciada: 50% ve A y 50% ve B');
+  }
   document.getElementById('dealRows').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-abprev]'); if (!b) return;
-    e.stopImmediatePropagation(); e.preventDefault(); verVariante(b);
+    var b = e.target.closest('[data-abprev], [data-ganadora], [data-reiniciar], [data-smart]'); if (!b) return;
+    if (b.hasAttribute('data-smart')) { var d = deals[Number(b.getAttribute('data-smart'))]; if (!d || !d._product) return; e.stopImmediatePropagation(); e.preventDefault(); abrirNuevaPrueba(d); return; }
+    e.stopImmediatePropagation(); e.preventDefault();
+    if (b.hasAttribute('data-abprev')) verVariante(b);
+    else if (b.hasAttribute('data-ganadora')) elegirGanadora(b.getAttribute('data-ganadora'));
+    else reiniciar(b.getAttribute('data-reiniciar'));
   }, true);
+
+  /* "Smart test": crear la prueba. A = la oferta tal cual; B = lo que se cambie aquí (solo presentación). */
+  var modal = document.createElement('div'); modal.className = 'modal'; modal.id = 'nuevaAB';
+  document.body.appendChild(modal);
+  // mismos campos que el editor de la maqueta (.field input)
+  var estilo = document.createElement('style');
+  estilo.textContent = '#nuevaAB .box{background:#fff}#nuevaAB .input{border:1px solid #8a8a8a55;border-radius:8px;padding:7px 9px;background:#fff;outline:none;min-width:0;margin-top:3px}' +
+    '#nuevaAB .input:focus{border-color:#303030;box-shadow:0 0 0 1px #303030}#nuevaAB label.hint{font-size:12px;font-weight:500;color:var(--ink)}';
+  document.head.appendChild(estilo);
+  function abrirNuevaPrueba(d) {
+    var corriendo = enCurso(d);
+    if (corriendo) { toast('Esta oferta ya tiene una prueba en curso: la ves en "A/B test archive"'); return; }
+    var c = d._config, bars = c.bars || [], campo = function (id, val, ph) { return '<input class="input" data-b="' + id + '" value="' + esc(val || '') + '" placeholder="' + esc(ph || '') + '" style="width:100%">'; };
+    modal.innerHTML = '<div class="box" style="max-width:1000px;width:96vw;max-height:92vh;overflow:auto">' +
+      '<div class="row between"><div><h2 style="font-size:18px">Nueva prueba A/B · ' + esc(d.name) + '</h2>' +
+      '<div class="hint">A = tu oferta como está hoy. B = lo que cambies abajo. La mitad de las visitantes ve A y la otra mitad B, y cada una ve siempre la misma.</div></div><button class="btn sm" data-x>Cancelar</button></div>' +
+      '<p class="hint" style="background:#fff8e6;border-radius:8px;padding:8px 10px;margin:10px 0">El precio no se puede probar: en el plan Basic de Shopify el precio de cada pack lo pone un descuento automático igual para todas. Sí puedes probar títulos, etiquetas, badges, qué paquete viene marcado y el título del bloque.</p>' +
+      '<div style="display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1fr) minmax(280px,1fr);gap:16px;align-items:start">' +
+        '<div><label class="hint">Nombre de la prueba</label>' + campo('nombre', d.name.replace(/ · packs$/, '') + ' — ' + new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })) +
+        '<label class="hint" style="display:block;margin-top:10px">Título del bloque (B)</label>' + campo('title', c.title) +
+        '<label class="hint" style="display:block;margin-top:10px">Paquete marcado al abrir (B)</label><select class="input" data-b="preselected" style="width:100%">' +
+          bars.map(function (b, i) { return '<option value="' + i + '"' + (i === (c.preselected || 0) ? ' selected' : '') + '>' + esc(nombreBarra(b)) + '</option>'; }).join('') + '</select>' +
+        bars.map(function (b, i) { return '<div style="margin-top:12px;padding-top:10px;border-top:1px solid #eee"><b>' + esc(b.title || ('Barra ' + (i + 1))) + '</b>' +
+          '<label class="hint" style="display:block;margin-top:6px">Título</label>' + campo('bars.' + i + '.title', b.title) +
+          '<label class="hint" style="display:block;margin-top:6px">Etiqueta</label>' + campo('bars.' + i + '.label', b.label) +
+          '<label class="hint" style="display:block;margin-top:6px">Badge (vacío = sin badge)</label>' + campo('bars.' + i + '.badge', b.badge) + '</div>'; }).join('') + '</div>' +
+        '<div><b>A · como está hoy</b><div class="pb" id="nabA" style="margin-top:8px"></div></div>' +
+        '<div><b>B · con tus cambios</b><div class="pb" id="nabB" style="margin-top:8px"></div></div>' +
+      '</div><div class="row" style="justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn" data-x>Cancelar</button><button class="btn dark" data-empezar>Empezar prueba</button></div></div>';
+    var leerB = function () {
+      var b = { bars: bars.map(function () { return {}; }) };
+      modal.querySelectorAll('[data-b]').forEach(function (el) {
+        var k = el.getAttribute('data-b'); if (k === 'nombre') return;
+        var m = k.match(/^bars\.(\d+)\.(\w+)$/), val = k === 'preselected' ? Number(el.value) : el.value.trim();
+        if (m) b.bars[Number(m[1])][m[2]] = val; else b[k] = val;
+      });
+      return b;
+    };
+    var pintar = function () { dibujar(document.getElementById('nabA'), d, c); dibujar(document.getElementById('nabB'), d, mezclarCfg(c, leerB())); };
+    modal.oninput = pintar; modal.onchange = pintar;
+    modal.onclick = function (e) {
+      if (e.target === modal || e.target.closest('[data-x]')) { modal.classList.remove('open'); return; }
+      if (!e.target.closest('[data-empezar]')) return;
+      var b = leerB(), cambios = [];
+      if ((b.title || '') !== (c.title || '')) cambios.push('título del bloque');
+      if (b.preselected !== (c.preselected || 0)) cambios.push('marca ' + nombreBarra(bars[b.preselected]));
+      bars.forEach(function (x, i) { CAMPOS_B.forEach(function (k) { if (k in b.bars[i] && (b.bars[i][k] || '') !== (x[k] || '')) cambios.push((x.title || 'barra ' + (i + 1)) + ': ' + k); }); });
+      if (!cambios.length) { toast('B es igual a A: cambia algo antes de empezar'); return; }
+      var nombre = modal.querySelector('[data-b="nombre"]').value.trim() || d.name;
+      var prueba = { id: 't' + Date.now().toString(36), nombre: nombre, inicio: new Date().toISOString(), split: 50,
+        variantes: [{ letra: 'A', nombre: 'A variant', nota: 'Actual' }, { letra: 'B', nombre: 'B variant', nota: cambios.slice(0, 3).join(' · ') + (cambios.length > 3 ? '…' : ''), config: b }] };
+      modal.classList.remove('open');
+      guardarPruebas(d, (d._ab || []).concat(prueba), 'Prueba A/B en marcha: la mitad de las visitantes ve B').then(function () { dealFilter = 'archived'; document.querySelectorAll('[data-f]').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-f') === 'archived'); }); renderDeals(); });
+    };
+    modal.classList.add('open'); pintar();
+  }
   document.addEventListener('click', function (e) { if (pop.style.display === 'block' && (e.target.closest('[data-cerrar]') || (!pop.contains(e.target) && !e.target.closest('[data-abprev]')))) pop.style.display = 'none'; });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') pop.style.display = 'none'; });
 

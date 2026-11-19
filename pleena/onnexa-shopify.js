@@ -143,6 +143,17 @@
   // log(msg) recibe cada paso, para mostrarlo en el panel.
   // El producto conserva UNA variante: cada pack es "qty unidades" de esa variante y el precio del pack
   // lo hacen descuentos automáticos por cantidad (así las ventas se registran por unidad, como con Kaching).
+  // Pruebas A/B: la lista completa vive en el metafield onnexa.bundle_ab del producto (la lee el widget del theme).
+  ONB.guardarAB = function (productId, pruebas) {
+    return q('mutation($m: [MetafieldsSetInput!]!) { metafieldsSet(metafields: $m) { userErrors { field message } } }',
+      { m: [{ ownerId: gid('Product', productId), namespace: NS, key: 'bundle_ab', type: 'json', value: JSON.stringify(pruebas) }] }).then(function (d) { errs(d.metafieldsSet); });
+  };
+  // Ganadora B: su presentación pasa a la oferta (precios, piezas y variante no cambian; no hay que tocar descuentos).
+  ONB.guardarConfig = function (productId, cfg) {
+    return q('mutation($m: [MetafieldsSetInput!]!) { metafieldsSet(metafields: $m) { userErrors { field message } } }',
+      { m: [{ ownerId: gid('Product', productId), namespace: NS, key: KEY, type: 'json', value: JSON.stringify(cfg) }] }).then(function (d) { errs(d.metafieldsSet); });
+  };
+
   ONB.publish = function (productId, state, log) {
     log = log || function () {};
     var p, cfgOld = {}, base, unitPrice, unitCompare;
