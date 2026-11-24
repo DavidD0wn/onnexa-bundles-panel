@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Onnexa Ebooks</title>
+<meta name="shopify-api-key" content="fc0e1ad76142aaf13a604f9030ae3be9">
+<script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+<style>
+  :root { --tinta:#1a1a1a; --gris:#6b7280; --linea:#e3e3e3; --fondo:#f1f2f4; --acento:#2c6ecb;
+          --mal:#d72c0d; --bien:#0e7c5a; --marca:#c9a08f; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color:var(--tinta); background:var(--fondo); }
+  .wrap { max-width:1060px; margin:0 auto; padding:18px 16px 56px; }
+  h1 { font-size:20px; margin:0 0 3px; }
+  .sub { color:var(--gris); font-size:13px; margin:0 0 16px; }
+  .caja { background:#fff; border:1px solid var(--linea); border-radius:12px; overflow:hidden; }
+  .pad { padding:16px; }
+
+  /* buscador y tabla */
+  .buscar { position:relative; padding:12px 16px; border-bottom:1px solid var(--linea); }
+  .buscar input { width:100%; padding:9px 12px; border:1px solid var(--linea); border-radius:8px; font:inherit; }
+  .cab, .fila { display:grid; grid-template-columns:76px 1fr 90px 150px; gap:12px; align-items:center; padding:10px 16px; }
+  .cab { background:#fafbfb; border-bottom:1px solid var(--linea); font-size:11px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.03em; }
+  .fila { border-bottom:1px solid var(--linea); }
+  .fila:last-child { border-bottom:0; }
+  .foto { width:56px; height:56px; border-radius:8px; background:var(--fondo); overflow:hidden; border:1px solid var(--linea); }
+  .foto img { width:100%; height:100%; object-fit:cover; display:block; }
+  .nom { font-weight:600; }
+  .arch { font-weight:700; color:var(--marca); }
+  .arch.cero { color:var(--gris); font-weight:400; }
+  .acc { display:flex; gap:14px; justify-content:flex-end; }
+  .enlace { background:none; border:0; padding:0; font:inherit; font-weight:600; color:var(--acento); cursor:pointer; }
+  .enlace.rojo { color:var(--mal); }
+  .vacio { padding:40px 16px; text-align:center; color:var(--gris); }
+
+  /* editor */
+  .cols { display:grid; grid-template-columns:1fr 380px; gap:16px; align-items:start; }
+  .paso { border:1px solid var(--linea); border-radius:12px; background:#fff; margin-bottom:14px; }
+  .paso h3 { font-size:14px; margin:0; padding:13px 16px; border-bottom:1px solid var(--linea); display:flex; align-items:center; gap:8px; }
+  .tic { width:17px; height:17px; border-radius:50%; background:var(--bien); color:#fff; font-size:11px; display:inline-flex; align-items:center; justify-content:center; flex:none; }
+  .tic.off { background:#c9ccd1; }
+  .prod { display:flex; gap:12px; align-items:center; }
+  .zona { border:2px dashed #cdd2d8; border-radius:10px; padding:22px; text-align:center; color:var(--gris); background:#fcfcfd; }
+  .zona.sobre { border-color:var(--acento); background:#eef3fb; }
+  .archivo { display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px 12px; border:1px solid var(--linea); border-radius:9px; }
+  .archivo .nomf { flex:1; font-size:13px; }
+  .pill { font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; background:#e6f4ef; color:var(--bien); }
+
+  /* vista previa del correo */
+  .previa { border:1px solid var(--linea); border-radius:12px; background:#fff; overflow:hidden; position:sticky; top:16px; }
+  .previa .top { background:#f6f6f7; padding:11px 14px; border-bottom:1px solid var(--linea); font-size:12px; color:var(--gris); }
+  .previa .cuerpo { padding:16px; font-size:13px; line-height:1.55; }
+  .previa .adj { display:flex; align-items:center; gap:9px; border:1px solid var(--linea); border-radius:9px; padding:9px 11px; margin:12px 0; }
+  .previa .boton { display:inline-block; background:var(--marca); color:#fff; font-weight:700; padding:9px 18px; border-radius:999px; font-size:13px; }
+  .previa .pie { color:var(--gris); font-size:11.5px; margin-top:14px; }
+
+  button.b1 { font:inherit; font-size:13px; font-weight:600; border-radius:8px; padding:8px 14px; cursor:pointer; border:0; background:var(--tinta); color:#fff; }
+  button.b2 { font:inherit; font-size:13px; font-weight:600; border-radius:8px; padding:8px 14px; cursor:pointer; border:1px solid var(--linea); background:#fff; color:var(--tinta); }
+  button:disabled { opacity:.55; cursor:default; }
+  .aviso { display:none; margin-bottom:14px; padding:10px 14px; border-radius:10px; font-size:13px; font-weight:600; }
+  .aviso.bien { background:#e6f4ef; color:var(--bien); border:1px solid #b8e0d2; }
+  .aviso.mal { background:#fdeceb; color:var(--mal); border:1px solid #f3c2bd; }
+  .gris { color:var(--gris); }
+  @media (max-width:820px) {
+    .cols { grid-template-columns:1fr; }
+    .previa { position:static; }
+    .cab, .fila { grid-template-columns:52px 1fr 70px; }
+    .cab span:nth-child(4), .acc { grid-column:2 / -1; justify-content:flex-start; }
+  }
+</style>
+</head>
+<body>
+<ui-nav-menu>
+  <a href="./" rel="home">Ebooks</a>
+</ui-nav-menu>
+
+<div class="wrap">
+  <div id="aviso" class="aviso"></div>
+
+  <!-- ═══ LISTA ═══ -->
+  <section id="vLista">
+    <h1>Ebooks</h1>
+    <p class="sub">Los productos con PDF se entregan solos por correo cuando se paga el pedido.</p>
+    <div class="caja">
+      <div class="buscar" style="display:flex; gap:10px; align-items:center">
+        <input type="search" id="buscar" placeholder="Buscar ebook…">
+        <span id="resumen" style="font-size:12px; color:var(--gris); white-space:nowrap"></span>
+        <button class="b1" id="nuevo" style="white-space:nowrap">+ Agregar ebook</button>
+      </div>
+      <div id="elegirCab" class="nota" style="display:none; margin:0; border-radius:0; border-left:0; border-right:0; border-top:0">
+        Elige a qué producto le vas a poner un ebook. Después subes el PDF.
+      </div>
+      <div class="cab"><span>Imagen</span><span>Nombre</span><span>Archivos</span><span style="text-align:right">Acciones</span></div>
+      <div id="lista"><div class="vacio">Cargando productos…</div></div>
+    </div>
+  </section>
+
+  <!-- ═══ EDITOR ═══ -->
+  <section id="vEditor" style="display:none">
+    <button class="b2" id="volver" style="margin-bottom:14px">← Volver</button>
+    <h1 id="edTitulo">Editar ebook</h1>
+    <p class="sub">Sube el PDF que recibirá quien compre este producto.</p>
+
+    <div class="cols">
+      <div>
+        <div class="paso">
+          <h3><span class="tic">✓</span> Paso 1: El producto</h3>
+          <div class="pad prod">
+            <div class="foto" id="edFoto"></div>
+            <div><div class="nom" id="edNombre"></div><div class="gris" id="edVariantes"></div></div>
+          </div>
+        </div>
+
+        <div class="paso">
+          <h3><span class="tic">✓</span> Paso 2: Cómo lo recibe</h3>
+          <div class="pad">
+            <b>Enlace de descarga por correo.</b>
+            <div class="gris" style="margin-top:5px">
+              Al pagarse el pedido sale un correo desde el buzón de la tienda con un botón de descarga
+              que dura 30 días. El archivo no viaja en el correo, así que no se traba por peso.
+            </div>
+          </div>
+        </div>
+
+        <div class="paso">
+          <h3><span class="tic off" id="tic3">✓</span> Paso 3: Sube el archivo</h3>
+          <div class="pad">
+            <div class="zona" id="zona">
+              Arrastra aquí el PDF o <button class="b2" id="elegir" style="margin-left:4px">Elegir archivo</button>
+              <div class="gris" style="margin-top:7px; font-size:12px">Solo PDF, hasta 25 MB</div>
+            </div>
+            <div id="edArchivo"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="previa">
+        <div class="top">Así le llega el correo a la clienta</div>
+        <div class="cuerpo">
+          <div class="gris">De: <b id="pvDe">tu tienda</b><br>Asunto: <b>Tu guía de regalo</b></div>
+          <hr style="border:0; border-top:1px solid var(--linea); margin:12px 0">
+          <div>Hola Ana,</div>
+          <p style="margin:9px 0">¡Gracias por tu compra! Como prometimos, aquí va tu guía en PDF. Toca el botón para descargarla (vale 30 días):</p>
+          <div class="adj">📄 <span class="nomf" id="pvArchivo">(sin archivo todavía)</span></div>
+          <div><span class="boton">Descargar: <span id="pvTitulo">tu guía</span></span></div>
+          <div class="pie">Guárdala en tu celular para tenerla siempre a la mano. Si tienes dudas, responde este correo.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<input type="file" id="archivo" accept="application/pdf" style="display:none">
+<script src="ebooks-app.js?v=3bb0cafe"></script>
+</body>
+</html>
