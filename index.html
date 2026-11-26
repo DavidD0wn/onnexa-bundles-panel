@@ -424,7 +424,7 @@
             <div class="card" style="margin:0">
               <div class="row between"><b>Preview ↗</b><button class="btn sm" id="setupAB">⚗ Setup A/B test</button></div>
               <div class="preview-head">
-                <div class="field"><label>Product previewing</label><select><option>Reedle Shot™ — Menos Caída, Más…</option></select></div>
+                <div class="field"><label>Product previewing</label><select id="prevProd"><option>—</option></select></div>
                 <div class="field"><label>Country previewing</label><select><option>Mexico</option></select></div>
               </div>
               <div class="stage"><div id="previewWidget" class="pb"></div></div>
@@ -437,7 +437,7 @@
       <!-- ===================== ANALYTICS ===================== -->
       <section id="v-analytics" class="hide">
         <div class="row" style="margin-bottom:12px">
-          <select class="btn sm"><option>All bundle deals</option><option>Pleena - PDRN Reedle Shot</option></select>
+          <select class="btn sm"><option>All bundle deals</option></select>
           <select class="btn sm"><option>Last 30d</option><option>Last 7d</option></select>
           <select class="btn sm"><option>Previous period</option></select>
           <span class="spacer"></span>
@@ -507,10 +507,10 @@
       <!-- ===================== STORE PREVIEW (demo) ===================== -->
       <section id="v-store" class="hide">
         <div class="pdp">
-          <div class="gallery"><img src="https://pleena.com/cdn/shop/files/Rds-Hero-ezgif.com-png-to-webp-converter.webp?height=600" alt="Reedle Shot" onerror="this.style.display='none'"></div>
+          <div class="gallery"><img id="storeImg" src="" alt="" onerror="this.style.display='none'"></div>
           <div>
             <div class="stars">★★★★★</div>
-            <h1>Reedle Shot™ — Menos Caída, Más Crecimiento y Más Densidad</h1>
+            <h1 id="storeTitle"></h1>
             <div style="margin:0 0 16px;color:#555">Así se ve tu bloque en la página de producto.</div>
             <div id="storeWidget" class="pb"></div>
             <button class="atc" id="atcBtn">Agregar al carrito</button>
@@ -896,7 +896,7 @@ $("abGrid").addEventListener("click",e=>{
   const b=e.target.closest("[data-i]"), col=e.target.closest("[data-ab]");
   if(b&&col){ abSel[+col.dataset.ab]=+b.dataset.i; renderAB(); }
 });
-$("setupAB").onclick=()=>{ if(!deals[0].test){ createTest(0); renderDeals(); toast("A/B test created for Pleena - PDRN Reedle Shot"); } openAB(0); };
+$("setupAB").onclick=()=>{ if(!deals[0].test){ createTest(0); renderDeals(); toast("A/B test created"); } openAB(0); };
 
 /* =====================================================================
    EDITOR — mismas secciones y nombres que Kaching
@@ -936,8 +936,8 @@ function renderEditor(){
     <label class="chk"><input type="radio" name="pv" checked> Selected products</label>
     <label class="chk"><input type="radio" name="pv"> Selected collections</label>
     <div class="row nowrap" style="background:#f7f7f7;border-radius:10px;padding:8px;margin:8px 0">
-      <img src="${s.bars[0].img}" style="width:36px;height:36px;border-radius:6px;object-fit:cover" alt="">
-      <b style="flex:1;font-size:12px">Reedle Shot™ — Menos Caída, Más Crecimiento y Más Densidad</b><button class="btn sm" data-demo="Remove product">🗑</button></div>
+      <img src="${window.__prodImg||s.bars[0].img}" style="width:36px;height:36px;border-radius:6px;object-fit:cover" alt="">
+      <b style="flex:1;font-size:12px">${esc(window.__prodTitulo||"Producto")}</b><button class="btn sm" data-demo="Remove product">🗑</button></div>
     <button class="btn dark block" data-demo="Opens Shopify product picker">⊕ Select more products</button>`;
 
   const settings = `
@@ -1207,7 +1207,7 @@ $("abInsights").onclick=e=>{ e.currentTarget.classList.toggle("on"); toast(e.cur
 $("atcBtn").onclick=()=>{
   const b=state.bars[storeSel], price=barPrice(b);
   const unlocked=state.on.gifts?state.gifts.items.filter(g=>giftOn(g,b,storeSel)):[];
-  const lines=[{img:b.img,t:`Reedle Shot™ — ${b.qty} pieza${b.qty>1?"s":""}`,s:b.label,p:price,c:fullPrice(b)}];
+  const lines=[{img:b.img,t:`${window.__prodTitulo||"Producto"} · ${b.qty} pieza${b.qty>1?"s":""}`,s:b.label,p:price,c:fullPrice(b)}];
   unlocked.filter(g=>g.type==="product").forEach(g=>lines.push({img:g.img,t:g.product,s:"🎁 Regalo",p:0,c:g.value}));
   $("cartLines").innerHTML=lines.map(l=>`<div class="line"><img src="${l.img}" alt=""><div class="grow"><b>${esc(l.t)}</b><div class="hint">${esc(l.s)}</div></div><div style="text-align:right"><b>${l.p?wm(l.p):"Gratis"}</b><div class="strike">${l.c?wm(l.c):""}</div></div></div>`).join("")
     + `<div class="line"><div class="grow">🚚 Envío</div><b>${unlocked.some(g=>g.type==="shipping")?"Gratis":"Se calcula al pagar"}</b></div>`;
@@ -1221,7 +1221,7 @@ $("drawer").addEventListener("click",e=>{ if(e.target.id==="drawer") e.currentTa
 /* INIT */
 renderKpis(); renderDeals(); renderMetrics(); renderATables();
 </script>
-<script src="onnexa-shopify.js?v=mwmsal8k"></script>
-<script src="onnexa-app.js?v=mwmsal8k"></script>
+<script src="onnexa-shopify.js?v=mwwtkl36"></script>
+<script src="onnexa-app.js?v=mwwtkl36"></script>
 </body>
 </html>

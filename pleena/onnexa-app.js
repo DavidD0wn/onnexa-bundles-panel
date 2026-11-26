@@ -41,11 +41,26 @@
     actual = product;
     var v1 = product.variants.nodes[0];
     UNIT_PRICE = Number(v1.price); UNIT_COMPARE = Number(v1.compareAtPrice || v1.price);
+    // el producto de ESTA oferta en todo el panel (la maqueta traía el Reedle Shot fijo)
+    var img = product.featuredMedia && product.featuredMedia.preview && product.featuredMedia.preview.image ? product.featuredMedia.preview.image.url : '';
+    window.__prodTitulo = product.title; window.__prodImg = img;
+    var po = document.querySelector('#prevProd option'); if (po) po.textContent = product.title;
+    var si = document.getElementById('storeImg'); if (si) { si.src = img; si.style.display = img ? '' : 'none'; }
+    var stt = document.getElementById('storeTitle'); if (stt) stt.textContent = product.title;
     var nuevo = JSON.parse(JSON.stringify(plantilla));
     Object.keys(state).forEach(function (k) { delete state[k]; });
     Object.assign(state, nuevo);
     if (cfg && cfg.bars) ONB.applyConfig(state, cfg);
-    else state.name = 'Oferta · ' + product.title.slice(0, 40);
+    else {
+      // oferta nueva: nada del Reedle Shot de la maqueta (fotos, precios ni regalos de Pleena, que en otras tiendas no existen)
+      state.name = 'Oferta · ' + product.title.slice(0, 40);
+      state.bars.forEach(function (b, i) {
+        b.img = img; b.title = 'Compra ' + b.qty; b.label = '';
+        b.value = Math.round(UNIT_PRICE * b.qty * [1, .9, .85][Math.min(i, 2)]); // 1 pieza a precio normal, 10 % y 15 % de ahorro
+      });
+      state.gifts.items = []; state.on.gifts = false;
+      state.badges.forEach(function (bd) { bd.text = 'Mejor precio'; });
+    }
     go('editor');
   }
 
@@ -65,15 +80,6 @@
       : Promise.resolve(window.prompt('ID del producto (en local no hay selector de Shopify):'));
     elegir.then(function (id) { if (id) return ONB.getProduct(id).then(function (p) { abrir(p, null); }); })
       .catch(function (e) { toast(e.message); });
-  };
-
-  // el editor de la maqueta trae fijo el Reedle Shot: mostrar el producto real
-  var renderEditorOrig = renderEditor;
-  renderEditor = function () {
-    renderEditorOrig();
-    if (!actual) return;
-    var panel = document.getElementById('editorPanel');
-    panel.querySelectorAll('b').forEach(function (b) { if (/Reedle Shot™ — Menos Caída/.test(b.textContent)) b.textContent = actual.title; });
   };
 
   // Publish = escribir en Shopify

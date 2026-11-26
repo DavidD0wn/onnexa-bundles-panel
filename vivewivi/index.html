@@ -425,7 +425,7 @@
             <div class="card" style="margin:0">
               <div class="row between"><b>Preview ↗</b><button class="btn sm" id="setupAB">⚗ Setup A/B test</button></div>
               <div class="preview-head">
-                <div class="field"><label>Product previewing</label><select><option>Reedle Shot™ — Menos Caída, Más…</option></select></div>
+                <div class="field"><label>Product previewing</label><select id="prevProd"><option>—</option></select></div>
                 <div class="field"><label>Country previewing</label><select><option>Mexico</option></select></div>
               </div>
               <div class="stage"><div id="previewWidget" class="pb"></div></div>
@@ -438,7 +438,7 @@
       <!-- ===================== ANALYTICS ===================== -->
       <section id="v-analytics" class="hide">
         <div class="row" style="margin-bottom:12px">
-          <select class="btn sm"><option>All bundle deals</option><option>Pleena - PDRN Reedle Shot</option></select>
+          <select class="btn sm"><option>All bundle deals</option></select>
           <select class="btn sm"><option>Last 30d</option><option>Last 7d</option></select>
           <select class="btn sm"><option>Previous period</option></select>
           <span class="spacer"></span>
@@ -467,7 +467,7 @@
           <div class="row between"><h2>Products</h2><button class="btn sm">(5) Performance metrics ▾</button></div>
           <div class="tablewrap" style="margin-top:12px"><table>
             <thead><tr><th>Product</th><th class="num">Orders</th><th class="num">Revenue ⇣</th><th class="num">Bundle orders</th><th class="num">AOV</th><th class="num">Profit</th></tr></thead>
-            <tbody><tr><td><div class="row nowrap"><img src="https://pleena.com/cdn/shop/files/Rds-Hero-ezgif.com-png-to-webp-converter.webp?height=80" alt="" style="width:28px;height:28px;border-radius:6px;object-fit:cover;background:#f6efec">Reedle Shot™ — Menos Caída, Más Crecimie…</div></td><td class="num">31</td><td class="num">MX$25,950</td><td class="num">24</td><td class="num">MX$837.09</td><td class="num">-</td></tr></tbody></table></div>
+            <tbody><tr><td><div class="row nowrap"><img src="https://pleena.com/cdn/shop/files/Rds-Hero-ezgif.com-png-to-webp-converter.webp?height=80" alt="" style="width:28px;height:28px;border-radius:6px;object-fit:cover;background:#f6efec">Reedle Shot™ — Menos Caída, Más Crecimie…</div></td><td class="num">31</td><td class="num">US$25,950</td><td class="num">24</td><td class="num">US$837.09</td><td class="num">-</td></tr></tbody></table></div>
         </div>
         <div class="two-col">
           <div class="card"><h2>Funnel</h2>
@@ -508,10 +508,10 @@
       <!-- ===================== STORE PREVIEW (demo) ===================== -->
       <section id="v-store" class="hide">
         <div class="pdp">
-          <div class="gallery"><img src="https://pleena.com/cdn/shop/files/Rds-Hero-ezgif.com-png-to-webp-converter.webp?height=600" alt="Reedle Shot" onerror="this.style.display='none'"></div>
+          <div class="gallery"><img id="storeImg" src="" alt="" onerror="this.style.display='none'"></div>
           <div>
             <div class="stars">★★★★★</div>
-            <h1>Reedle Shot™ — Menos Caída, Más Crecimiento y Más Densidad</h1>
+            <h1 id="storeTitle"></h1>
             <div style="margin:0 0 16px;color:#555">Así se ve tu bloque en la página de producto.</div>
             <div id="storeWidget" class="pb"></div>
             <button class="atc" id="atcBtn">Agregar al carrito</button>
@@ -611,7 +611,7 @@ const deals = [
    ===================================================================== */
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const mx = (n,d=0) => "MX$"+Number(n).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const mx = (n,d=0) => "US$"+Number(n).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
 const pct = v => (Math.round(v*10)/10).toLocaleString("en-US")+"%";
 const wm = n => { const d = state.settings.noDecimals ? 0 : 2; return "$ "+Number(n).toLocaleString("es-MX",{minimumFractionDigits:d,maximumFractionDigits:d}); };
 const getPath = (o,p) => p.split(".").reduce((a,k)=>a==null?a:a[k], o);
@@ -726,10 +726,10 @@ function spark(points){
 }
 /* 7 y 30 días: tus números reales de Kaching. 24 hours y All time: demo */
 const overview = {
-  "24h":{label:"24 hours", k:[["MX$612","8.20%","up"],["MX$818.50","3.10%","up"],["80.0%","2.00%","down"],["MX$8.90","5.40%","down"]], pts:[[2,3,2,4,3,5,4],[5,5,6,5,6,6,6],[6,5,6,6,5,5,5],[4,5,4,3,4,3,3]]},
-  "7d": {label:"7 days",   k:[["MX$3,801","12.00%","down"],["MX$799.04","6.00%","down"],["84.2%","10.10%","up"],["MX$9.65","40.70%","down"]], pts:[[5,6,6.5,5.5,4.5,4.6,3],[7,6.6,6.5,6.3,6.4,6.3,4],[7,6,6,7,7,7,3],[4,5.5,5.6,5.2,4.8,5.6,3.2]]},
-  "30d":{label:"30 days",  k:[["MX$7,441","2299.4%","up"],["MX$837.09","2.00%","down"],["77.4%","0.00%","up"],["MX$10.89","133.2%","up"]], pts:[[0,0,0,2,5,6,7],[0,0,0,6,6,7,6],[0,0,0,7,7,7,7],[0,0,0,3,5,6,6]]},
-  "all":{label:"All time", k:[["MX$14,892","—","up"],["MX$812.40","—","up"],["79.1%","—","up"],["MX$9.12","—","up"]], pts:[[1,2,2,3,4,5,7],[5,6,6,6,7,7,7],[5,6,6,7,7,7,7],[3,4,4,5,5,6,6]]},
+  "24h":{label:"24 hours", k:[["US$612","8.20%","up"],["US$818.50","3.10%","up"],["80.0%","2.00%","down"],["US$8.90","5.40%","down"]], pts:[[2,3,2,4,3,5,4],[5,5,6,5,6,6,6],[6,5,6,6,5,5,5],[4,5,4,3,4,3,3]]},
+  "7d": {label:"7 days",   k:[["US$3,801","12.00%","down"],["US$799.04","6.00%","down"],["84.2%","10.10%","up"],["US$9.65","40.70%","down"]], pts:[[5,6,6.5,5.5,4.5,4.6,3],[7,6.6,6.5,6.3,6.4,6.3,4],[7,6,6,7,7,7,3],[4,5.5,5.6,5.2,4.8,5.6,3.2]]},
+  "30d":{label:"30 days",  k:[["US$7,441","2299.4%","up"],["US$837.09","2.00%","down"],["77.4%","0.00%","up"],["US$10.89","133.2%","up"]], pts:[[0,0,0,2,5,6,7],[0,0,0,6,6,7,6],[0,0,0,7,7,7,7],[0,0,0,3,5,6,6]]},
+  "all":{label:"All time", k:[["US$14,892","—","up"],["US$812.40","—","up"],["79.1%","—","up"],["US$9.12","—","up"]], pts:[[1,2,2,3,4,5,7],[5,6,6,6,7,7,7],[5,6,6,7,7,7,7],[3,4,4,5,5,6,6]]},
 };
 let ovPeriod="7d";
 function renderKpis(){
@@ -897,7 +897,7 @@ $("abGrid").addEventListener("click",e=>{
   const b=e.target.closest("[data-i]"), col=e.target.closest("[data-ab]");
   if(b&&col){ abSel[+col.dataset.ab]=+b.dataset.i; renderAB(); }
 });
-$("setupAB").onclick=()=>{ if(!deals[0].test){ createTest(0); renderDeals(); toast("A/B test created for Pleena - PDRN Reedle Shot"); } openAB(0); };
+$("setupAB").onclick=()=>{ if(!deals[0].test){ createTest(0); renderDeals(); toast("A/B test created"); } openAB(0); };
 
 /* =====================================================================
    EDITOR — mismas secciones y nombres que Kaching
@@ -937,8 +937,8 @@ function renderEditor(){
     <label class="chk"><input type="radio" name="pv" checked> Selected products</label>
     <label class="chk"><input type="radio" name="pv"> Selected collections</label>
     <div class="row nowrap" style="background:#f7f7f7;border-radius:10px;padding:8px;margin:8px 0">
-      <img src="${s.bars[0].img}" style="width:36px;height:36px;border-radius:6px;object-fit:cover" alt="">
-      <b style="flex:1;font-size:12px">Reedle Shot™ — Menos Caída, Más Crecimiento y Más Densidad</b><button class="btn sm" data-demo="Remove product">🗑</button></div>
+      <img src="${window.__prodImg||s.bars[0].img}" style="width:36px;height:36px;border-radius:6px;object-fit:cover" alt="">
+      <b style="flex:1;font-size:12px">${esc(window.__prodTitulo||"Producto")}</b><button class="btn sm" data-demo="Remove product">🗑</button></div>
     <button class="btn dark block" data-demo="Opens Shopify product picker">⊕ Select more products</button>`;
 
   const settings = `
@@ -999,10 +999,10 @@ function renderEditor(){
     <div class="field"><label>Font</label><select data-p="style.font"><option value="theme" ${S.font==="theme"?"selected":""}>Theme default</option><option value="Inter, sans-serif" ${S.font.startsWith("Inter")?"selected":""}>Inter</option><option value="Georgia, serif" ${S.font.startsWith("Georgia")?"selected":""}>Georgia</option></select></div>
     <div class="tgrid">${fgrp("blockTitle","Block title")}${fgrp("title","Title")}${fgrp("subtitle","Subtitle")}${fgrp("label","Label")}${fgrp("gift","Free gift")}${fgrp("upsell","Upsell")}</div>`;
 
-  const priceField = (b,i) => b.priceType==="default" ? `<div class="field"><label>Total price</label><div class="pre"><span>MX$</span><input disabled value="${UNIT_PRICE*b.qty}"></div></div>`
-    : b.priceType==="fixed" ? inp(`bars.${i}.value`,"Total price",{type:"number",prefix:"MX$"})
+  const priceField = (b,i) => b.priceType==="default" ? `<div class="field"><label>Total price</label><div class="pre"><span>US$</span><input disabled value="${UNIT_PRICE*b.qty}"></div></div>`
+    : b.priceType==="fixed" ? inp(`bars.${i}.value`,"Total price",{type:"number",prefix:"US$"})
     : b.priceType==="percent" ? inp(`bars.${i}.value`,"Discount",{type:"number",prefix:"%"})
-    : inp(`bars.${i}.value`,"Amount off",{type:"number",prefix:"MX$"});
+    : inp(`bars.${i}.value`,"Amount off",{type:"number",prefix:"US$"});
   const bars = s.bars.map((b,i)=>`
     <div class="barwrap"><span class="handle" title="Drag">⠿</span>
       <div class="acc ${openAcc.has("bar"+i)?"open":""}" data-acc="bar${i}" style="position:relative">
@@ -1154,10 +1154,10 @@ function renderTranslations(){
    ANALYTICS (tus números reales de los últimos 30 días)
    ===================================================================== */
 const metrics=[
-  {k:"rev",l:"Revenue",v:"MX$25,950",d:"1419.2%",up:true},{k:"added",l:"Added revenue",v:"MX$7,441",d:"2299.4%",up:true},
+  {k:"rev",l:"Revenue",v:"US$25,950",d:"1419.2%",up:true},{k:"added",l:"Added revenue",v:"US$7,441",d:"2299.4%",up:true},
   {k:"orders",l:"Bundle orders",v:"24",d:"1100%",up:true},{k:"vis",l:"Visitors",v:"2382",d:"550.8%",up:true},
-  {k:"cr",l:"CR",v:"1.3%",d:"160%",up:true},{k:"aov",l:"AOV",v:"MX$837.09",d:"2%",up:false},
-  {k:"rpv",l:"Revenue / visitor",v:"MX$10.89",d:"133.2%",up:true},{k:"atc",l:"ATC",v:"173",d:"1341.7%",up:true},
+  {k:"cr",l:"CR",v:"1.3%",d:"160%",up:true},{k:"aov",l:"AOV",v:"US$837.09",d:"2%",up:false},
+  {k:"rpv",l:"Revenue / visitor",v:"US$10.89",d:"133.2%",up:true},{k:"atc",l:"ATC",v:"173",d:"1341.7%",up:true},
   {k:"atcr",l:"ATC rate",v:"7.3%",d:"121.2%",up:true}];
 let activeMetric="rev";
 const days=[]; { const st=new Date(2026,8,13); for(let i=0;i<30;i++){ const d=new Date(st); d.setDate(d.getDate()+i); days.push(d);} }
@@ -1177,7 +1177,7 @@ function renderChart(key){
   const W=900,H=220,pl=60,pb=24,pt=8,max=Math.max(...cur,...prev)*1.1||1;
   const x=i=>pl+i/(cur.length-1)*(W-pl-10), y=v=>pt+(H-pt-pb)*(1-v/max);
   const smooth=a=>a.map((v,i)=>{ if(!i) return `M${x(0)},${y(v)}`; const x0=x(i-1),y0=y(a[i-1]),x1=x(i),y1=y(v),cx=(x0+x1)/2; return `C${cx},${y0} ${cx},${y1} ${x1},${y1}`; }).join(" ");
-  const fmt=v=>["cr","atcr"].includes(key)?v.toFixed(1)+"%":["orders","vis","atc"].includes(key)?Math.round(v):"MX$"+Math.round(v).toLocaleString("en-US");
+  const fmt=v=>["cr","atcr"].includes(key)?v.toFixed(1)+"%":["orders","vis","atc"].includes(key)?Math.round(v):"US$"+Math.round(v).toLocaleString("en-US");
   const M=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   let svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">`;
   [0,.25,.5,.75,1].map(t=>max/1.1*t).forEach(t=>{ svg+=`<line x1="${pl}" x2="${W-10}" y1="${y(t)}" y2="${y(t)}" stroke="#eee"/><text x="${pl-8}" y="${y(t)+4}" font-size="10" text-anchor="end" fill="#8a8a8a">${fmt(t)}</text>`; });
@@ -1189,8 +1189,8 @@ function renderATables(){
   const a=[["Pleena - PDRN Reedle Shot",25950,24,2358,837.09,11],["Pleena - Digestive",0,0,0,0,0],["Bundle #4",0,0,0,0,0],["Collar Relato Eterno",0,0,0,0,0],["Pleena - Growturn mx",0,0,24,0,0,true],["Collar abrazo eterno",0,0,0,0,0],["Collar abrazo eterno (Copy)",0,0,0,0,0]];
   const dn=`<div class="delta down">↘ 100%</div>`;
   $("aRows").innerHTML=a.map(r=>`<tr><td>👁 ${r[0]}</td><td class="num">${mx(r[1])}${r[6]?dn:""}</td><td class="num">${r[2]}${r[6]?dn:""}</td><td class="num">${r[3]}${r[6]?'<div class="delta down">↘ 93.4%</div>':""}</td><td class="num">${mx(r[4],2)}${r[6]?dn:""}</td><td class="num">${mx(r[5],2)}${r[6]?dn:""}</td></tr>`).join("");
-  const f=[["› Quantity breaks",24,"100%","MX$21,817","MX$909.03",true],["BXGY",0,"0%","MX$0","MX$0.00"],["Bundle",0,"0%","MX$0","MX$0.00"],["Mix & match",0,"0%","MX$0","MX$0.00"],["Deal box",0,"0%","MX$0","MX$0.00"],["Upsells",0,"0%","MX$0","MX$0.00"],["Checkbox upsells",0,"0%","MX$0","MX$0.00"],["› Gifts",24,"100%","MX$0","MX$909.03",true],["Subscriptions",0,"0%","MX$0","MX$0.00"],["Personalisation",0,"0%","MX$0","MX$0.00"]];
-  $("fRows").innerHTML=f.map(r=>`<tr><td>${r[0]}</td><td class="num">${r[1]}${r[5]?'<div class="delta up">↗ 1100%</div>':""}</td><td class="num">${r[2]}${r[5]?'<div class="delta up">↗ 0%</div>':""}</td><td class="num">${r[3]}${r[5]&&r[3]!=="MX$0"?'<div class="delta up">↗ 1177.2%</div>':""}</td><td class="num">${r[4]}${r[5]?'<div class="delta up">↗ 6.4%</div>':""}</td><td class="num">-</td></tr>`).join("");
+  const f=[["› Quantity breaks",24,"100%","US$21,817","US$909.03",true],["BXGY",0,"0%","US$0","US$0.00"],["Bundle",0,"0%","US$0","US$0.00"],["Mix & match",0,"0%","US$0","US$0.00"],["Deal box",0,"0%","US$0","US$0.00"],["Upsells",0,"0%","US$0","US$0.00"],["Checkbox upsells",0,"0%","US$0","US$0.00"],["› Gifts",24,"100%","US$0","US$909.03",true],["Subscriptions",0,"0%","US$0","US$0.00"],["Personalisation",0,"0%","US$0","US$0.00"]];
+  $("fRows").innerHTML=f.map(r=>`<tr><td>${r[0]}</td><td class="num">${r[1]}${r[5]?'<div class="delta up">↗ 1100%</div>':""}</td><td class="num">${r[2]}${r[5]?'<div class="delta up">↗ 0%</div>':""}</td><td class="num">${r[3]}${r[5]&&r[3]!=="US$0"?'<div class="delta up">↗ 1177.2%</div>':""}</td><td class="num">${r[4]}${r[5]?'<div class="delta up">↗ 6.4%</div>':""}</td><td class="num">-</td></tr>`).join("");
   const fu=[["Visits","2382","100%","550.8%",100,15],["ATC","173","7.3%","1341.7%",7.3,1.2],["Purchase","31","1.3%","1450%",1.3,.3]];
   $("funnel").innerHTML=fu.map(r=>`<div><div><b>${r[0]}</b> ${r[1]} <span style="color:var(--muted)">${r[2]}</span> <span class="delta up">↗ ${r[3]}</span></div><div class="bars"><div class="b" style="height:${Math.max(3,r[4])}%"></div><div class="b prev" style="height:${Math.max(3,r[5])}%"></div></div></div>`).join("");
   const parts=[["1 item",22.6,"#9b7bff"],["2 items",0,"#c3b0ff"],["3+ items",77.4,"#ddd2ff"]]; let a0=0;
@@ -1208,7 +1208,7 @@ $("abInsights").onclick=e=>{ e.currentTarget.classList.toggle("on"); toast(e.cur
 $("atcBtn").onclick=()=>{
   const b=state.bars[storeSel], price=barPrice(b);
   const unlocked=state.on.gifts?state.gifts.items.filter(g=>giftOn(g,b,storeSel)):[];
-  const lines=[{img:b.img,t:`Reedle Shot™ — ${b.qty} pieza${b.qty>1?"s":""}`,s:b.label,p:price,c:fullPrice(b)}];
+  const lines=[{img:b.img,t:`${window.__prodTitulo||"Producto"} · ${b.qty} pieza${b.qty>1?"s":""}`,s:b.label,p:price,c:fullPrice(b)}];
   unlocked.filter(g=>g.type==="product").forEach(g=>lines.push({img:g.img,t:g.product,s:"🎁 Regalo",p:0,c:g.value}));
   $("cartLines").innerHTML=lines.map(l=>`<div class="line"><img src="${l.img}" alt=""><div class="grow"><b>${esc(l.t)}</b><div class="hint">${esc(l.s)}</div></div><div style="text-align:right"><b>${l.p?wm(l.p):"Gratis"}</b><div class="strike">${l.c?wm(l.c):""}</div></div></div>`).join("")
     + `<div class="line"><div class="grow">🚚 Envío</div><b>${unlocked.some(g=>g.type==="shipping")?"Gratis":"Se calcula al pagar"}</b></div>`;
@@ -1222,7 +1222,7 @@ $("drawer").addEventListener("click",e=>{ if(e.target.id==="drawer") e.currentTa
 /* INIT */
 renderKpis(); renderDeals(); renderMetrics(); renderATables();
 </script>
-<script src="onnexa-shopify.js?v=mwutpzcm"></script>
-<script src="onnexa-app.js?v=mwutpzcm"></script>
+<script src="onnexa-shopify.js?v=mwwtkl6d"></script>
+<script src="onnexa-app.js?v=mwwtkl6d"></script>
 </body>
 </html>
