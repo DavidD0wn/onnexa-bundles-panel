@@ -86,9 +86,9 @@
   var pub = document.getElementById('publishBtn');
   pub.onclick = function () {
     if (!actual) { toast('Abre o crea una oferta primero'); return; }
-    var aviso = actual.variants.nodes.length === 1
-      ? 'Se crearán las variantes "1 pieza / 2 piezas / 3 piezas" en "' + actual.title + '".\n\nSi la página de este producto todavía usa el theme anterior con Kaching, esto la cambia. ¿Publicar?'
-      : '¿Publicar los cambios de "' + actual.title + '" en la tienda?';
+    // Publish ya no crea variantes: guarda la caja de ofertas y rehace los descuentos de los paquetes
+    var aviso = '¿Publicar la oferta de "' + actual.title + '"?\n\nSe actualizan la caja de ofertas y los descuentos de los paquetes' +
+      (actual.variants.nodes.length > 1 ? ' (valen para cualquier modelo)' : '') + '. El producto y sus variantes no se tocan.';
     if (!window.confirm(aviso)) return;
     pub.disabled = true; pub.textContent = 'Publicando…';
     ONB.publish(actual.id, state, function (m) { pub.textContent = m; })

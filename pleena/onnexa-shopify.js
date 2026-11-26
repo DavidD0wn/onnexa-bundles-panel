@@ -94,7 +94,8 @@
     colors.badgeBg = badge.bg || colors.labelBg; colors.badgeText = badge.color || colors.labelText;
     var bars = state.bars.map(function (b, i) {
       var bd = state.on.badges && state.badges.filter(function (x) { return x.bar === i; })[0];
-      var out = { qty: b.qty, price: ctx.priceOf(b), title: b.title, subtitle: b.subtitle, label: b.label, image: b.img, variantId: ctx.variantOf(b.qty) };
+      var out = { qty: b.qty, price: ctx.priceOf(b), title: b.title, subtitle: b.subtitle, label: b.label, image: b.img };
+      var vid = ctx.variantOf(b.qty); if (vid) out.variantId = vid;
       if (bd && bd.text) out.badge = bd.text;
       return out;
     });
@@ -105,7 +106,7 @@
     }) : [];
     return {
       dealId: ctx.dealId, name: state.name, locale: 'es-MX', decimals: state.settings.noDecimals ? 0 : 2,
-      variantId: bars[0] && bars[0].variantId, unitCompareAt: ctx.unitCompare,
+      variantId: (bars[0] && bars[0].variantId) || undefined, unitCompareAt: ctx.unitCompare,
       title: state.blockTitle, preselected: state.preselected, bars: bars,
       gifts: { title: state.gifts.title, items: items },
       style: { radius: state.style.radius, spacing: state.style.spacing, imageSize: 42, colors: colors, fonts: state.style.fonts },
@@ -162,16 +163,27 @@
       try { cfgOld = JSON.parse((p.metafield || {}).value || '{}'); } catch (e) {}
       var opts = p.options.map(function (o) { return o.name; });
       if (opts.length === 1 && opts[0] === OPT) return quitarVariantesPack(p, log).then(function (pp) { p = pp; });
-      if (p.variants.nodes.length !== 1)
-        throw new Error('"' + p.title + '" tiene variantes (' + opts.join(', ') + '). Onnexa Bundles arma packs por cantidad sobre productos de una sola variante.');
+      // con modelos (Oso/Conejo…): el pack cuenta piezas de CUALQUIER modelo, así que todos deben costar lo mismo
+      var precios = p.variants.nodes.map(function (v) { return Number(v.price); });
+      if (precios.some(function (x) { return x !== precios[0]; }))
+        throw new Error('"' + p.title + '": sus variantes (' + opts.join(', ') + ') tienen precios distintos. Para los paquetes todas deben costar lo mismo.');
     }).then(function () {
+      var multi = p.variants.nodes.length > 1;
       base = p.variants.nodes[0];
       unitPrice = Number(base.price); unitCompare = Number(base.compareAtPrice || base.price);
       var priceOf = function (b) { return b.priceType === 'fixed' ? Number(b.value) : b.priceType === 'percent' ? Math.round(unitPrice * b.qty * (1 - b.value / 100)) : b.priceType === 'amount' ? Math.max(0, unitPrice * b.qty - b.value) : unitPrice * b.qty; };
-      return sincronizarDescuentos(p, state, base, unitPrice, priceOf, cfgOld.discounts || {}, log).then(function (discounts) {
+      return sincronizarDescuentos(p, state, base, unitPrice, priceOf, cfgOld.discounts || {}, log, multi).then(function (discounts) {
         var cfg = ONB.configFromState(state, {
           dealId: cfgOld.dealId || p.handle, unitCompare: unitCompare, discounts: discounts,
-          priceOf: priceOf, variantOf: function () { return num(base.id); }
+          // con modelos, el bloque agrega el modelo que la clienta eligió en la página: no se fija ninguno
+          priceOf: priceOf, variantOf: function () { return multi ? null : num(base.id); }
+        });
+        // lo que el editor no maneja pero la oferta ya tenía (miniatura, tachado "N × precio"): se conserva
+        if (cfgOld.thumb) cfg.thumb = cfgOld.thumb;
+        var p1 = (cfg.bars.filter(function (b) { return b.qty === 1; })[0] || {}).price;
+        cfg.bars.forEach(function (b) {
+          var vieja = (cfgOld.bars || []).filter(function (x) { return x.qty === b.qty; })[0];
+          if (vieja && vieja.compareAt && p1) b.compareAt = b.qty * p1;
         });
         log('Guardando la oferta en el producto…');
         return q('mutation($m: [MetafieldsSetInput!]!) { metafieldsSet(metafields: $m) { userErrors { field message } } }',
@@ -204,7 +216,7 @@
   // Descuentos automáticos de la oferta (se recrean en cada publicación):
   //  · precio del pack: un descuento por cantidad mínima con el monto total del pack (no por unidad).
   //  · regalos: ver regalarGratis.
-  function sincronizarDescuentos(p, state, base, unitPrice, priceOf, viejos, log) {
+  function sincronizarDescuentos(p, state, base, unitPrice, priceOf, viejos, log, multi) {
     var nuevos = {}, paso = Promise.resolve();
     var regalos = state.on.gifts ? state.gifts.items.filter(function (g) { return g.type === 'product' && g.variant; }) : [];
     var nombre = (state.name || p.title).slice(0, 60);
@@ -228,7 +240,7 @@
             title: 'Onnexa · ' + nombre + ' · pack de ' + b.qty, startsAt: new Date().toISOString(),
             combinesWith: { orderDiscounts: true, productDiscounts: true, shippingDiscounts: true },
             minimumRequirement: { quantity: { greaterThanOrEqualToQuantity: String(b.qty) } },
-            customerGets: { value: { discountAmount: { amount: extra.toFixed(2), appliesOnEachItem: false } }, items: { products: { productVariantsToAdd: [base.id] } } }
+            customerGets: { value: { discountAmount: { amount: extra.toFixed(2), appliesOnEachItem: false } }, items: { products: multi ? { productsToAdd: [p.id] } : { productVariantsToAdd: [base.id] } } }
           } }).then(function (d) { errs(d.discountAutomaticBasicCreate); nuevos['pack' + b.qty] = d.discountAutomaticBasicCreate.automaticDiscountNode.id; });
         });
       } else if (b.qty > 1) log('Pack de ' + b.qty + ': sin descuento (no es más barato por unidad que la unidad suelta).');
