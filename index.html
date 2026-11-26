@@ -425,7 +425,7 @@
               <div class="row between"><b>Preview ↗</b><button class="btn sm" id="setupAB">⚗ Setup A/B test</button></div>
               <div class="preview-head">
                 <div class="field"><label>Product previewing</label><select id="prevProd"><option>—</option></select></div>
-                <div class="field"><label>Country previewing</label><select><option>Mexico</option></select></div>
+                <div class="field"><label>Country previewing</label><select id="prevPais"><option value="MX">Mexico</option></select></div>
               </div>
               <div class="stage"><div id="previewWidget" class="pb"></div></div>
             </div>
@@ -610,9 +610,9 @@ const deals = [
    ===================================================================== */
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const mx = (n,d=0) => "MX$"+Number(n).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const mx = (n,d=0) => (window.__simbolo||"MX$")+Number(n).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
 const pct = v => (Math.round(v*10)/10).toLocaleString("en-US")+"%";
-const wm = n => { const d = state.settings.noDecimals ? 0 : 2; return "$ "+Number(n).toLocaleString("es-MX",{minimumFractionDigits:d,maximumFractionDigits:d}); };
+const wm = n => { const d = state.settings.noDecimals ? 0 : 2; const t=window.__tasa||1, c=window.__monedaPrev; return (c&&c!=="MXN"?c+" ":"$ ")+Number(n*t).toLocaleString("es-MX",{minimumFractionDigits:d,maximumFractionDigits:d}); };
 const getPath = (o,p) => p.split(".").reduce((a,k)=>a==null?a:a[k], o);
 const setPath = (o,p,v) => { const ks=p.split("."), last=ks.pop(); const t=ks.reduce((a,k)=>a[k],o); t[last]=v; };
 function toast(msg){ let t=document.querySelector(".toast"); if(!t){t=document.createElement("div");t.className="toast";document.body.appendChild(t);} t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2400); }
@@ -937,7 +937,7 @@ function renderEditor(){
     <label class="chk"><input type="radio" name="pv"> Selected collections</label>
     <div class="row nowrap" style="background:#f7f7f7;border-radius:10px;padding:8px;margin:8px 0">
       <img src="${window.__prodImg||s.bars[0].img}" style="width:36px;height:36px;border-radius:6px;object-fit:cover" alt="">
-      <b style="flex:1;font-size:12px">${esc(window.__prodTitulo||"Producto")}</b><button class="btn sm" data-demo="Remove product">🗑</button></div>
+      <b style="flex:1;font-size:12px">${esc(window.__prodTitulo||"Producto")}${(window.__variantes||[]).length>1?`<span style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;font-weight:500">${window.__variantes.map(v=>`<span style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e3e3e3;border-radius:999px;padding:3px 10px 3px 3px">${v.img?`<img src="${v.img}" style="width:22px;height:22px;border-radius:50%;object-fit:cover" alt="">`:""}${esc(v.titulo)} · ${mx(v.precio)}</span>`).join("")}</span>`:""}</b><button class="btn sm" data-demo="Remove product">🗑</button></div>
     <button class="btn dark block" data-demo="Opens Shopify product picker">⊕ Select more products</button>`;
 
   const settings = `
@@ -945,7 +945,7 @@ function renderEditor(){
     ${inp("blockTitle","Block title")}
     ${inp("discountName","Discount name (shown in cart/checkout)")}
     <div class="sect"><b>Visibility</b>
-      <div class="field"><label>Markets</label><select data-p="market"><option ${s.market==="Mexico"?"selected":""}>Mexico</option><option ${s.market==="All markets"?"selected":""}>All markets</option></select></div>
+      <div class="field"><label>Markets</label><select data-p="market">${(window.__mercados||[{nombre:"Mexico"}]).map(m=>`<option ${s.market===m.nombre?"selected":""}>${esc(m.nombre)}</option>`).join("")}<option ${s.market==="All markets"?"selected":""}>All markets</option></select></div>
       ${chk("settings.excludeB2b","Exclude B2B customers","No se muestra a clientes B2B")}
       ${chk("settings.onlyWidget","Apply discount only via bundle widget","El precio del paquete solo aplica si lo eligen en el bloque")}</div>
     <div class="sect"><b>Active dates</b>
@@ -1221,7 +1221,7 @@ $("drawer").addEventListener("click",e=>{ if(e.target.id==="drawer") e.currentTa
 /* INIT */
 renderKpis(); renderDeals(); renderMetrics(); renderATables();
 </script>
-<script src="onnexa-shopify.js?v=mwwtuxr7"></script>
-<script src="onnexa-app.js?v=mwwtuxr7"></script>
+<script src="onnexa-shopify.js?v=mwwub7gi"></script>
+<script src="onnexa-app.js?v=mwwub7gi"></script>
 </body>
 </html>

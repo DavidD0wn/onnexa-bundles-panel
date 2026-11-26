@@ -31,7 +31,7 @@
   /* ------------------------------------------------------------ lectura */
   var PRODUCT = 'id title handle status featuredMedia { preview { image { url } } } ' +
     'options { id name values } ' +
-    'variants(first: 100) { nodes { id title price compareAtPrice sku inventoryPolicy selectedOptions { name value } inventoryItem { tracked } } } ' +
+    'variants(first: 100) { nodes { id title price compareAtPrice sku inventoryPolicy selectedOptions { name value } inventoryItem { tracked } image { url } } } ' +
     'metafield(namespace: "' + NS + '", key: "' + KEY + '") { value updatedAt } ' +
     // visitas/elecciones/carrito por día y paquete: lo escribe cada hora el dashboard de Onnexa
     'stats: metafield(namespace: "' + NS + '", key: "bundle_stats") { value } ' +
@@ -46,6 +46,22 @@
         return { product: p, config: cfg };
       });
     });
+  };
+  // Mercados de Shopify (Configuración → Mercados). Sin el permiso read_markets: solo la moneda de la tienda.
+  ONB.mercados = function () {
+    return q('{ shop { currencyCode } markets(first: 20) { nodes { name enabled primary currencySettings { baseCurrency { currencyCode } } regions(first: 250) { nodes { name ... on MarketRegionCountry { code } } } } } }').then(function (d) {
+      return d.markets.nodes.filter(function (m) { return m.enabled; }).map(function (m) {
+        return { nombre: m.name, principal: m.primary, moneda: (m.currencySettings && m.currencySettings.baseCurrency.currencyCode) || d.shop.currencyCode,
+          paises: m.regions.nodes.map(function (x) { return { code: x.code, nombre: x.name }; }).filter(function (x) { return x.code; }) };
+      });
+    }).catch(function () {
+      return q('{ shop { currencyCode } }').then(function (d) { return [{ nombre: 'Mexico', principal: true, moneda: d.shop.currencyCode, paises: [{ code: 'MX', nombre: 'Mexico' }] }]; });
+    });
+  };
+  // precio de una variante en un país (con la conversión y redondeo de Shopify Markets)
+  ONB.precioLocal = function (variantId, pais) {
+    return q('query($id: ID!, $c: CountryCode!) { productVariant(id: $id) { price contextualPricing(context: { country: $c }) { price { amount currencyCode } } } }', { id: variantId, c: pais })
+      .then(function (d) { var v = d.productVariant; return { base: Number(v.price), local: Number(v.contextualPricing.price.amount), moneda: v.contextualPricing.price.currencyCode }; });
   };
   ONB.getProduct = function (id) {
     return q('query($id: ID!) { product(id: $id) { ' + PRODUCT + ' } }', { id: gid('Product', id) }).then(function (d) {
@@ -110,13 +126,16 @@
       title: state.blockTitle, preselected: state.preselected, bars: bars,
       gifts: { title: state.gifts.title, items: items },
       style: { radius: state.style.radius, spacing: state.style.spacing, imageSize: 42, colors: colors, fonts: state.style.fonts },
-      discounts: ctx.discounts || {}
+      discounts: ctx.discounts || {},
+      // Visibility → Markets: el bloque de la tienda solo se muestra en estos países (sin lista = en todos)
+      market: state.market, paises: state.paises && state.paises.length ? state.paises : undefined
     };
   };
   // vuelve a llenar el editor con una oferta guardada (lo que no viene se queda como estaba)
   ONB.applyConfig = function (state, cfg) {
     if (!cfg || !cfg.bars) return state;
     state.name = cfg.name || state.name;
+    state.market = cfg.market || 'All markets'; state.paises = cfg.paises || null;
     state.blockTitle = cfg.title || state.blockTitle;
     state.preselected = cfg.preselected != null ? cfg.preselected : state.preselected;
     state.bars = cfg.bars.map(function (b) {

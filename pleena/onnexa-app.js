@@ -44,6 +44,10 @@
     // el producto de ESTA oferta en todo el panel (la maqueta traía el Reedle Shot fijo)
     var img = product.featuredMedia && product.featuredMedia.preview && product.featuredMedia.preview.image ? product.featuredMedia.preview.image.url : '';
     window.__prodTitulo = product.title; window.__prodImg = img;
+    // sus variantes (modelos) para verlas en el editor; la vista previa vuelve al país principal
+    window.__variantes = product.variants.nodes.map(function (v) { return { titulo: v.title, precio: Number(v.price), img: v.image ? v.image.url : '' }; });
+    window.__tasa = 1; window.__monedaPrev = null;
+    var pp = document.getElementById('prevPais'); if (pp) pp.selectedIndex = 0;
     var po = document.querySelector('#prevProd option'); if (po) po.textContent = product.title;
     var si = document.getElementById('storeImg'); if (si) { si.src = img; si.style.display = img ? '' : 'none'; }
     var stt = document.getElementById('storeTitle'); if (stt) stt.textContent = product.title;
@@ -63,6 +67,26 @@
     }
     go('editor');
   }
+
+  // Mercados de Shopify: moneda del panel, países de "Country previewing" y opciones de "Markets"
+  ONB.mercados().then(function (ms) {
+    window.__mercados = ms;
+    var principal = ms.filter(function (m) { return m.principal; })[0] || ms[0];
+    window.__simbolo = principal && principal.moneda === 'USD' ? 'US$' : 'MX$';
+    var pp = document.getElementById('prevPais');
+    if (pp) {
+      var ord = [principal].concat(ms.filter(function (m) { return m !== principal; }));
+      pp.innerHTML = ord.map(function (m) { return m.paises.map(function (x) { return '<option value="' + x.code + '">' + x.nombre + ' · ' + m.moneda + '</option>'; }).join(''); }).join('');
+      pp.onchange = function () {
+        if (!actual) return;
+        if (pp.selectedIndex === 0) { window.__tasa = 1; window.__monedaPrev = null; renderPreview(); return; }
+        ONB.precioLocal(actual.variants.nodes[0].id, pp.value).then(function (x) {
+          window.__tasa = x.base ? x.local / x.base : 1; window.__monedaPrev = x.moneda; renderPreview();
+        }).catch(function (e) { toast('No se pudo leer el precio de ese país: ' + e.message); });
+      };
+    }
+    if (actual && !document.getElementById('v-editor').classList.contains('hide')) renderEditor();
+  });
 
   // abrir una oferta de la tabla (clic en la fila, no en sus botones)
   document.getElementById('dealRows').addEventListener('click', function (e) {
@@ -90,6 +114,9 @@
     var aviso = '¿Publicar la oferta de "' + actual.title + '"?\n\nSe actualizan la caja de ofertas y los descuentos de los paquetes' +
       (actual.variants.nodes.length > 1 ? ' (valen para cualquier modelo)' : '') + '. El producto y sus variantes no se tocan.';
     if (!window.confirm(aviso)) return;
+    // Visibility → Markets: guarda los países del mercado elegido (All markets = en todos)
+    var mk = (window.__mercados || []).filter(function (m) { return m.nombre === state.market; })[0];
+    state.paises = mk ? mk.paises.map(function (x) { return x.code; }) : null;
     pub.disabled = true; pub.textContent = 'Publicando…';
     ONB.publish(actual.id, state, function (m) { pub.textContent = m; })
       .then(function (r) { actual = r.product; pub.textContent = '✓ Publicado'; toast('Oferta publicada en tu tienda'); return cargarOfertas(); })
