@@ -63,6 +63,7 @@
         b.value = Math.round(UNIT_PRICE * b.qty * [1, .9, .85][Math.min(i, 2)]); // 1 pieza a precio normal, 10 % y 15 % de ahorro
       });
       state.gifts.items = []; state.on.gifts = false;
+      Object.assign(state.gifts, { subtitle: '', hideLocked: false, lockedLabels: true, lockedImage: true, inCompare: false });
       state.badges.forEach(function (bd) { bd.text = 'Mejor precio'; });
     }
     go('editor');
@@ -105,6 +106,27 @@
     elegir.then(function (id) { if (id) return ONB.getProduct(id).then(function (p) { abrir(p, null); }); })
       .catch(function (e) { toast(e.message); });
   };
+
+  // Free gift: el regalo es un producto de la tienda (p. ej. el ebook que creamos), elegido con el selector de Shopify como en Kaching
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-giftpick]'); if (!b) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    var g = state.gifts.items[Number(b.getAttribute('data-giftpick'))]; if (!g) return;
+    var elegir = window.shopify && shopify.resourcePicker
+      ? shopify.resourcePicker({ type: 'product', multiple: false }).then(function (sel) { return sel && sel[0] && sel[0].id; })
+      : Promise.resolve(window.prompt('ID del producto regalo (en local no hay selector de Shopify):'));
+    elegir.then(function (id) {
+      if (!id) return;
+      return ONB.getProduct(id).then(function (p) {
+        var v = p.variants.nodes[0] || {};
+        g.type = 'product'; g.product = p.title; g.variant = Number(String(v.id).split('/').pop());
+        g.value = Number(v.compareAtPrice || v.price) || 0; // lo que se tacha: "Gratis ~~$150~~"
+        g.img = (v.image && v.image.url) || (p.featuredMedia && p.featuredMedia.preview && p.featuredMedia.preview.image && p.featuredMedia.preview.image.url) || '';
+        if (Number(v.price) > 0) toast('Ojo: "' + p.title + '" cuesta $' + v.price + '. Para regalarlo gratis su precio debe ser $0.');
+        renderEditor(); renderPreview();
+      });
+    }).catch(function (err) { toast(err.message); });
+  }, true);
 
   // Publish = escribir en Shopify
   var pub = document.getElementById('publishBtn');

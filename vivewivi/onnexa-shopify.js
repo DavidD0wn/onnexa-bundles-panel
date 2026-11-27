@@ -115,8 +115,10 @@
       if (bd && bd.text) out.badge = bd.text;
       return out;
     });
-    var items = state.on.gifts ? state.gifts.items.map(function (g) {
-      var base = { type: g.type, unlockAt: g.unlockAt, label: g.label, lockedTitle: g.locked, image: g.img };
+    // un regalo de producto sin producto elegido no se publica (mandaría "undefined" al carrito)
+    var items = state.on.gifts ? state.gifts.items.filter(function (g) { return g.type === 'shipping' || g.variant; }).map(function (g) {
+      // la imagen del camión del panel (data:) no se publica: la tienda pone el ícono del tema en su color
+      var base = { type: g.type, unlockAt: g.unlockAt, label: g.label, lockedTitle: g.locked, image: g.img && g.img.indexOf('data:') !== 0 ? g.img : undefined };
       if (g.type === 'shipping') return Object.assign(base, { title: g.title });
       return Object.assign(base, { variantId: g.variant, value: g.value, title: (g.title || '').indexOf('{{') >= 0 ? g.product : g.title });
     }) : [];
@@ -124,7 +126,10 @@
       dealId: ctx.dealId, name: state.name, locale: 'es-MX', decimals: state.settings.noDecimals ? 0 : 2,
       variantId: (bars[0] && bars[0].variantId) || undefined, unitCompareAt: ctx.unitCompare,
       title: state.blockTitle, preselected: state.preselected, bars: bars,
-      gifts: { title: state.gifts.title, items: items },
+      gifts: { title: state.gifts.title, subtitle: state.gifts.subtitle || undefined, items: items,
+        // opciones de Kaching: ocultar hasta desbloquear, etiqueta y portada en las bloqueadas, sumar al precio tachado
+        hideLocked: !!state.gifts.hideLocked, lockedLabels: state.gifts.lockedLabels !== false,
+        lockedImage: state.gifts.lockedImage !== false, inCompare: !!state.gifts.inCompare },
       style: { radius: state.style.radius, spacing: state.style.spacing, imageSize: 42, colors: colors, fonts: state.style.fonts },
       discounts: ctx.discounts || {},
       // Visibility → Markets: el bloque de la tienda solo se muestra en estos países (sin lista = en todos)
@@ -146,7 +151,9 @@
     state.badges = badges; state.on.badges = badges.length > 0;
     if (cfg.gifts) {
       state.on.gifts = (cfg.gifts.items || []).length > 0;
-      state.gifts.title = cfg.gifts.title;
+      state.gifts.title = cfg.gifts.title; state.gifts.subtitle = cfg.gifts.subtitle || '';
+      state.gifts.hideLocked = !!cfg.gifts.hideLocked; state.gifts.lockedLabels = cfg.gifts.lockedLabels !== false;
+      state.gifts.lockedImage = cfg.gifts.lockedImage !== false; state.gifts.inCompare = !!cfg.gifts.inCompare;
       state.gifts.items = (cfg.gifts.items || []).map(function (g) {
         return { type: g.type, product: g.title, value: g.value, variant: g.variantId, unlockAt: g.unlockAt, only: false, qty: 1, label: g.label, crossed: g.type === 'product' ? '{{original_total}}' : '', title: g.title, locked: g.lockedTitle, img: g.image, subsOnly: false, excludeRates: false };
       });

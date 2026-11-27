@@ -132,7 +132,7 @@
   .menu button.danger{color:var(--red)}
 
   /* ---------- Editor (igual que Kaching) ---------- */
-  .editor{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:16px;align-items:start}
+  .editor{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,360px);gap:16px;align-items:start}
   .epanel{background:#fff;border-radius:12px;box-shadow:0 0 0 1px rgba(0,0,0,.06);padding:10px}
   .ehead{display:flex;align-items:center;gap:8px;padding:4px 4px 10px}
   .ehead b{font-size:14px}
@@ -574,7 +574,7 @@ const state = {
   badges: [{bar:1, style:"simple", text:"Más elegido hoy", size:12, color:"#ffffff", bg:"#c9a08f"}],
   on: { badges:true, volume:false, timer:false, scratch:false, subs:false, checkbox:false, gifts:true, sticky:false },
   timer: { minutes:15, text:"La oferta termina en" },
-  gifts: { title:"🎁 Regalos Gratis por tu compra", subtitle:"", items:[
+  gifts: { title:"🎁 Regalos Gratis por tu compra", subtitle:"", hideLocked:false, lockedLabels:true, lockedImage:true, inCompare:false, items:[
     {type:"shipping", unlockAt:1, only:false, qty:1, label:"Gratis", crossed:"", title:"Envío Gratis a Todo México", locked:"Bloqueado", img:CDN+"carrito-envio-pleena-transparente-ezgif.com-jpg-to-webp-converter_300x300.webp?v=1785035130", excludeRates:false, subsOnly:false},
     {type:"product", product:"Guía Digital - Recupera la Densidad de tu Cabello", value:270, variant:54362771816816, unlockAt:2, only:false, qty:1, label:"Gratis", crossed:"{{original_total}}", title:"{{product}}", locked:"Llévala al comprar 2", img:CDN+"ImagendeCodex24sept2026_18_30_37.png?v=1790294262", subsOnly:false},
     {type:"product", product:"Guía digital: 7 Hábitos Anticaída", value:150, variant:54074627719536, unlockAt:3, only:false, qty:1, label:"Gratis", crossed:"{{original_total}}", title:"{{product}}", locked:"Llévala al comprar 3", img:CDN+"portada-7-habitos-caida-cabello-pleena.png?v=1785034501", subsOnly:false},
@@ -691,11 +691,11 @@ function widgetHTML(sel, prices){
   if(s.on.gifts && s.gifts.items.length){
     h += `<div class="pb-gt">${esc(s.gifts.title)}</div>${s.gifts.subtitle?`<div class="pb-gs">${esc(s.gifts.subtitle)}</div>`:""}<div class="pb-gifts" style="--pb-n:${s.gifts.items.length}">`;
     s.gifts.items.forEach(g=>{
-      const on=giftOn(g,bar,sel), gv={product:g.product||"", original_total:g.value?wm(g.value):""};
+      const on=giftOn(g,bar,sel); if(!on&&s.gifts.hideLocked) return; const gv={product:g.product||"", original_total:g.value?wm(g.value):""};
       const crossed=fill(g.crossed,gv);
-      h += `<div class="pb-gift ${on?"on":""}"><span class="pb-tag">${esc(fill(g.label,gv))}${crossed?`<s>${esc(crossed)}</s>`:""}</span>
-        ${on? `<img src="${g.img}" alt="" onerror="this.style.visibility='hidden'">` : lockSvg}
-        <div class="pb-gname">${esc(on? fill(g.title,gv) : fill(g.locked,gv))}</div></div>`;
+      h += `<div class="pb-gift ${on?"on":""}">${on||s.gifts.lockedLabels!==false?`<span class="pb-tag">${esc(fill(g.label,gv))}${crossed?`<s>${esc(crossed)}</s>`:""}</span>`:""}
+        ${(on||s.gifts.lockedImage!==false)&&g.img? `<img src="${g.img}" alt="" onerror="this.style.visibility='hidden'">` : on?"":lockSvg}
+        <div class="pb-gname">${esc(on? fill(g.title,gv) : (fill(g.locked,gv)||"Regalo al llevar "+((s.bars[g.unlockAt-1]||{}).qty||g.unlockAt)))}</div></div>`;
     });
     h += `</div>`;
   }
@@ -1045,10 +1045,11 @@ function renderEditor(){
   const gifts = `
     ${inp("gifts.title","Title")}
     ${inp("gifts.subtitle","Subtitle")}
+    ${chk("gifts.hideLocked","Hide gifts until it's unlocked")}${chk("gifts.lockedLabels","Show labels for locked gifts")}${chk("gifts.lockedImage","Show product image for locked gifts","Si no, la tarjeta bloqueada muestra un candado")}${chk("gifts.inCompare","Include in compare-at price","Suma el valor de los regalos al precio tachado de cada pack")}
     ${s.gifts.items.map((g,i)=>`
     <div class="innercard"><div class="top"><b>Gift #${i+1}</b><button class="linkbtn gray" data-giftmove="${i}|-1" aria-label="Move up">↑</button><button class="linkbtn gray" data-giftmove="${i}|1" aria-label="Move down">↓</button><button class="linkbtn" data-delgift="${i}">Remove gift</button></div>
       <div class="gtabs"><button data-gifttype="${i}|product" class="${g.type==="product"?"on":""}">🎁<span>Free gift</span></button><button data-gifttype="${i}|shipping" class="${g.type==="shipping"?"on":""}">🚚<span>Free shipping</span></button></div>
-      ${g.type==="product"?`<div class="gprod"><img src="${g.img}" alt=""><b>${esc(g.product)}</b><button class="btn sm" data-demo="Reset image">⟲ Reset image</button><button class="btn sm" data-demo="Remove product">🗑</button></div>
+      ${g.type==="product"?`<div class="gprod"><img src="${g.img}" alt=""><b>${esc(g.product)}</b><button class="btn sm" data-giftpick="${i}">🔄 Cambiar producto</button></div>
       <div class="field" style="max-width:160px"><label>Select gift quantity</label><input type="number" min="1" data-p="gifts.items.${i}.qty" data-t="num" value="${g.qty}"></div>`
       :`<div class="gprod"><img src="${g.img}" alt=""><b>Free shipping</b><button class="btn sm" data-demo="Edit image">🖼 Edit image</button></div>`}
       <div class="field"><label>Unlock at</label><select data-giftunlock="${i}">${unlockOpts(g)}</select></div>
@@ -1109,11 +1110,11 @@ ep.addEventListener("click",e=>{
   if(e.target.id==="addBar"){ const last=state.bars[state.bars.length-1], n=last.qty+1; state.bars.push({...last, qty:n, priceType:"fixed", value:last.value+350, title:"Compra "+n, label:""}); openAcc.add("bar"+(state.bars.length-1)); renderEditor(); return; }
   if(e.target.id==="addBadge"){ state.badges.push({bar:0, style:"simple", text:"Nuevo", size:12, color:"#ffffff", bg:state.style.colors.border}); renderEditor(); return; }
   if(q("[data-delbadge]")){ state.badges.splice(+q("[data-delbadge]").dataset.delbadge,1); renderEditor(); return; }
-  if(e.target.id==="addGift"){ const g=state.gifts.items; g.push({...g[g.length-1], unlockAt:Math.min(state.bars.length,(g[g.length-1]||{unlockAt:0}).unlockAt+1)}); renderEditor(); return; }
+  if(e.target.id==="addGift"){ const g=state.gifts.items; g.push({...(g[g.length-1]||{}), type:"product", product:"Elige un producto →", value:0, variant:null, img:"", only:false, qty:1, label:"Gratis", crossed:"{{original_total}}", title:"{{product}}", locked:"", subsOnly:false, excludeRates:false, unlockAt:Math.min(state.bars.length,(g[g.length-1]||{unlockAt:0}).unlockAt+1)}); renderEditor(); return; }
   if(q("[data-delgift]")){ state.gifts.items.splice(+q("[data-delgift]").dataset.delgift,1); renderEditor(); return; }
   if(q("[data-giftmove]")){ const [i,d]=q("[data-giftmove]").dataset.giftmove.split("|").map(Number), G=state.gifts.items, j=i+d; if(j>=0&&j<G.length) [G[i],G[j]]=[G[j],G[i]]; renderEditor(); return; }
   if(q("[data-gifttype]")){ const [i,t]=q("[data-gifttype]").dataset.gifttype.split("|"), g=state.gifts.items[+i];
-    if(t!==g.type){ g.type=t; if(t==="shipping"){ g.title="Envío Gratis a Todo México"; g.crossed=""; g.img=CDN+"carrito-envio-pleena-transparente-ezgif.com-jpg-to-webp-converter_300x300.webp?v=1785035130"; } else { g.product=g.product||"Guía digital: 7 Hábitos Anticaída"; g.value=g.value||150; g.title="{{product}}"; g.crossed="{{original_total}}"; g.img=CDN+"portada-7-habitos-caida-cabello-pleena.png?v=1785034501"; } }
+    if(t!==g.type){ g.type=t; if(t==="shipping"){ g.title="Envío Gratis a Todo México"; g.crossed=""; g.img="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23555%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M2.5%206.5h11v9h-11zM13.5%209.5h4l3%203v3h-7z%22%2F%3E%3Ccircle%20cx%3D%227%22%20cy%3D%2217.5%22%20r%3D%221.8%22%2F%3E%3Ccircle%20cx%3D%2217%22%20cy%3D%2217.5%22%20r%3D%221.8%22%2F%3E%3C%2Fsvg%3E"; } else { g.product="Elige un producto →"; g.value=0; g.variant=null; g.title="{{product}}"; g.crossed="{{original_total}}"; g.img=""; } }
     renderEditor(); return; }
   const h=q(".acc>header");
   if(h && !q("button")){ const a=h.parentElement, id=a.dataset.acc; a.classList.toggle("open"); a.classList.contains("open")?openAcc.add(id):openAcc.delete(id); }
@@ -1185,7 +1186,7 @@ function renderChart(key){
   svg+=`<path d="${smooth(cur)} L${x(cur.length-1)},${y(0)} L${x(0)},${y(0)} Z" fill="#8051ff" opacity=".07"/><path d="${smooth(prev)}" fill="none" stroke="#b9a5ff" stroke-width="2" stroke-dasharray="3 4"/><path d="${smooth(cur)}" fill="none" stroke="#8051ff" stroke-width="2.2"/></svg>`;
   $("chart").innerHTML=svg;
 }
-function renderATables(){
+function renderATables(){ document.querySelectorAll("#v-analytics .card").forEach(c=>{ if(c.id!=="paquetes") c.style.display="none"; }); return;
   const a=[["Pleena - PDRN Reedle Shot",25950,24,2358,837.09,11],["Pleena - Digestive",0,0,0,0,0],["Bundle #4",0,0,0,0,0],["Collar Relato Eterno",0,0,0,0,0],["Pleena - Growturn mx",0,0,24,0,0,true],["Collar abrazo eterno",0,0,0,0,0],["Collar abrazo eterno (Copy)",0,0,0,0,0]];
   const dn=`<div class="delta down">↘ 100%</div>`;
   $("aRows").innerHTML=a.map(r=>`<tr><td>👁 ${r[0]}</td><td class="num">${mx(r[1])}${r[6]?dn:""}</td><td class="num">${r[2]}${r[6]?dn:""}</td><td class="num">${r[3]}${r[6]?'<div class="delta down">↘ 93.4%</div>':""}</td><td class="num">${mx(r[4],2)}${r[6]?dn:""}</td><td class="num">${mx(r[5],2)}${r[6]?dn:""}</td></tr>`).join("");
@@ -1199,7 +1200,7 @@ function renderATables(){
     <div style="width:170px;height:170px;border-radius:50%;background:conic-gradient(${grad});display:flex;align-items:center;justify-content:center"><div style="width:112px;height:112px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center"><b style="font-size:22px">31</b><span class="delta up">↗ 1450%</span></div></div>`;
 }
 $("csvBtn").onclick=()=>{ const csv="date,revenue\n"+days.map((d,i)=>`${d.toISOString().slice(0,10)},${series[i].toFixed(2)}`).join("\n");
-  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download="pleena-bundles-revenue.csv"; a.click(); };
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download="onnexa-bundles-revenue.csv"; a.click(); };
 $("abInsights").onclick=e=>{ e.currentTarget.classList.toggle("on"); toast(e.currentTarget.classList.contains("on")?"A/B test insights on":"A/B test insights off"); };
 
 /* =====================================================================
@@ -1222,7 +1223,7 @@ $("drawer").addEventListener("click",e=>{ if(e.target.id==="drawer") e.currentTa
 /* INIT */
 renderKpis(); renderDeals(); renderMetrics(); renderATables();
 </script>
-<script src="onnexa-shopify.js?v=mwwub7i5"></script>
-<script src="onnexa-app.js?v=mwwub7i5"></script>
+<script src="onnexa-shopify.js?v=mwyaeups"></script>
+<script src="onnexa-app.js?v=mwyaeups"></script>
 </body>
 </html>
